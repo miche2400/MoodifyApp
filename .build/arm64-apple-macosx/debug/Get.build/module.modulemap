@@ -1,0 +1,4 @@
+module Get {
+    header "/Users/michellerodriguez/Documents/GitHub/MoodifyApp/.build/arm64-apple-macosx/debug/Get.build/Get-Swift.h"
+    requires objc
+}

@@ -1,0 +1,4 @@
+module URLQueryEncoder {
+    header "/Users/michellerodriguez/Documents/GitHub/MoodifyApp/.build/arm64-apple-macosx/debug/URLQueryEncoder.build/URLQueryEncoder-Swift.h"
+    requires objc
+}

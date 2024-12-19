@@ -1,0 +1,29 @@
+{
+  "": {
+    "swift-dependencies": "/Users/michellerodriguez/Documents/GitHub/MoodifyApp/.build/arm64-apple-macosx/debug/Supabase.build/master.swiftdeps"
+  },
+  "/Users/michellerodriguez/Documents/GitHub/MoodifyApp/.build/checkouts/supabase-swift/Sources/Supabase/Deprecations.swift": {
+    "dependencies": "/Users/michellerodriguez/Documents/GitHub/MoodifyApp/.build/arm64-apple-macosx/debug/Supabase.build/Deprecations.d",
+    "object": "/Users/michellerodriguez/Documents/GitHub/MoodifyApp/.build/arm64-apple-macosx/debug/Supabase.build/Deprecations.swift.o",
+    "swiftmodule": "/Users/michellerodriguez/Documents/GitHub/MoodifyApp/.build/arm64-apple-macosx/debug/Supabase.build/Deprecations~partial.swiftmodule",
+    "swift-dependencies": "/Users/michellerodriguez/Documents/GitHub/MoodifyApp/.build/arm64-apple-macosx/debug/Supabase.build/Deprecations.swiftdeps"
+  },
+  "/Users/michellerodriguez/Documents/GitHub/MoodifyApp/.build/checkouts/supabase-swift/Sources/Supabase/SupabaseClient.swift": {
+    "dependencies": "/Users/michellerodriguez/Documents/GitHub/MoodifyApp/.build/arm64-apple-macosx/debug/Supabase.build/SupabaseClient.d",
+    "object": "/Users/michellerodriguez/Documents/GitHub/MoodifyApp/.build/arm64-apple-macosx/debug/Supabase.build/SupabaseClient.swift.o",
+    "swiftmodule": "/Users/michellerodriguez/Documents/GitHub/MoodifyApp/.build/arm64-apple-macosx/debug/Supabase.build/SupabaseClient~partial.swiftmodule",
+    "swift-dependencies": "/Users/michellerodriguez/Documents/GitHub/MoodifyApp/.build/arm64-apple-macosx/debug/Supabase.build/SupabaseClient.swiftdeps"
+  },
+  "/Users/michellerodriguez/Documents/GitHub/MoodifyApp/.build/checkouts/supabase-swift/Sources/Supabase/Types.swift": {
+    "dependencies": "/Users/michellerodriguez/Documents/GitHub/MoodifyApp/.build/arm64-apple-macosx/debug/Supabase.build/Types.d",
+    "object": "/Users/michellerodriguez/Documents/GitHub/MoodifyApp/.build/arm64-apple-macosx/debug/Supabase.build/Types.swift.o",
+    "swiftmodule": "/Users/michellerodriguez/Documents/GitHub/MoodifyApp/.build/arm64-apple-macosx/debug/Supabase.build/Types~partial.swiftmodule",
+    "swift-dependencies": "/Users/michellerodriguez/Documents/GitHub/MoodifyApp/.build/arm64-apple-macosx/debug/Supabase.build/Types.swiftdeps"
+  },
+  "/Users/michellerodriguez/Documents/GitHub/MoodifyApp/.build/checkouts/supabase-swift/Sources/Supabase/Version.swift": {
+    "dependencies": "/Users/michellerodriguez/Documents/GitHub/MoodifyApp/.build/arm64-apple-macosx/debug/Supabase.build/Version.d",
+    "object": "/Users/michellerodriguez/Documents/GitHub/MoodifyApp/.build/arm64-apple-macosx/debug/Supabase.build/Version.swift.o",
+    "swiftmodule": "/Users/michellerodriguez/Documents/GitHub/MoodifyApp/.build/arm64-apple-macosx/debug/Supabase.build/Version~partial.swiftmodule",
+    "swift-dependencies": "/Users/michellerodriguez/Documents/GitHub/MoodifyApp/.build/arm64-apple-macosx/debug/Supabase.build/Version.swiftdeps"
+  }
+}

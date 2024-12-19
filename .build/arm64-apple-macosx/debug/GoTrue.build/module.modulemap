@@ -1,0 +1,4 @@
+module GoTrue {
+    header "/Users/michellerodriguez/Documents/GitHub/MoodifyApp/.build/arm64-apple-macosx/debug/GoTrue.build/GoTrue-Swift.h"
+    requires objc
+}
