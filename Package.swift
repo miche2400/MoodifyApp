@@ -25,7 +25,7 @@ let package = Package(
             path: "Sources/MoodifyApp",
             resources: [
                 .process("Assets.xcassets"),
-                .process("Preview Assets.xcassets") /
+                .process("Preview Assets.xcassets")
             ]
         ),
         .testTarget(

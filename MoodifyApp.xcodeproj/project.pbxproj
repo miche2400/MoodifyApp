@@ -24,7 +24,6 @@
 		D69713192D11F269006C23D4 /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = D69713182D11F269006C23D4 /* Realtime */; };
 		D697131B2D11F269006C23D4 /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = D697131A2D11F269006C23D4 /* Storage */; };
 		D697131D2D11F269006C23D4 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = D697131C2D11F269006C23D4 /* Supabase */; };
-		D69713312D12027A006C23D4 /* Package.swift in Sources */ = {isa = PBXBuildFile; fileRef = D697132F2D12026B006C23D4 /* Package.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -131,9 +130,9 @@
 		D69712662D11C6A0006C23D4 = {
 			isa = PBXGroup;
 			children = (
+				D697132F2D12026B006C23D4 /* Package.swift */,
 				D6971AFF2D123CD0006C23D4 /* Sources */,
 				D6971B0F2D123DF6006C23D4 /* Tests */,
-				D697132F2D12026B006C23D4 /* Package.swift */,
 				D69712BB2D11E416006C23D4 /* Frameworks */,
 				D69712702D11C6A0006C23D4 /* Products */,
 			);
@@ -315,7 +314,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D69713312D12027A006C23D4 /* Package.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
