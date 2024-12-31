@@ -8,9 +8,9 @@
 
 import Foundation
 
-struct SupabaseItem: Codable, Identifiable {
-    var id: Int
-    var likert_scale: Int
-    var multiple_choice: String
-    var timestamp: String
+struct SupabaseItem: Codable {
+    let id: Int
+    let likert_scale: Int
+    let multiple_choice: String
+    let timestamp: String
 }

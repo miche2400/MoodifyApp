@@ -23,22 +23,22 @@ class SupabaseService {
     func submitResponses(responses: [Response], completion: @escaping (Bool) -> Void) {
         Task {
             do {
-                // Execute the insertion query
+                // Perform the insertion query
                 let result = try await client
                     .from("responses")
                     .insert(responses)
                     .execute()
 
-                // Check the status code to determine the outcome
+                // Check if the insertion was successful
                 if result.status == 201 { // 201 indicates successful insertion
                     print("Data inserted successfully.")
                     completion(true)
                 } else {
-                    // Optionally handle different statuses if needed
                     print("Insertion failed with status: \(result.status)")
                     completion(false)
                 }
             } catch {
+                // Handle any errors during the insertion process
                 print("Error during data insertion: \(error.localizedDescription)")
                 completion(false)
             }
@@ -46,25 +46,29 @@ class SupabaseService {
     }
 
 
+
+
     // MARK: - Fetch Responses
+   
     func fetchResponses(completion: @escaping ([SupabaseItem]) -> Void) {
         Task {
             do {
-                // Execute the query and directly attempt to access the `.value` property
+                // Fetch and decode responses directly into the SupabaseItem array
                 let items: [SupabaseItem] = try await client
                     .from("responses")
                     .select()
                     .execute()
-                    .value  // decode the JSON response into the specified Swift type
+                    .value // Automatically decodes into [SupabaseItem]
 
-                print("Fetched items: \(items)")
+                print("Fetched items: \(items)") // Log the fetched items for debugging
                 completion(items)
             } catch {
                 print("Error fetching data: \(error.localizedDescription)")
-                completion([])
+                completion([]) // Return an empty array in case of error
             }
         }
     }
+
 
 
 }
