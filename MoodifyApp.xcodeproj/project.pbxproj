@@ -50,37 +50,10 @@
 		D697132F2D12026B006C23D4 /* Package.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Package.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		D6971B142D123E0E006C23D4 /* Exceptions for "Tests" folder in "MoodifyAppTests" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				MoodifyAppTests/MoodifyAppTests.swift,
-			);
-			target = D69712832D11C6A4006C23D4 /* MoodifyAppTests */;
-		};
-		D6971B1A2D123E11006C23D4 /* Exceptions for "Tests" folder in "MoodifyAppUITests" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				MoodifyAppUITests/MoodifyAppUITests.swift,
-				MoodifyAppUITests/MoodifyAppUITestsLaunchTests.swift,
-			);
-			target = D697128D2D11C6A4006C23D4 /* MoodifyAppUITests */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		D6971AFF2D123CD0006C23D4 /* Sources */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Sources;
-			sourceTree = "<group>";
-		};
-		D6971B0F2D123DF6006C23D4 /* Tests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				D6971B142D123E0E006C23D4 /* Exceptions for "Tests" folder in "MoodifyAppTests" target */,
-				D6971B1A2D123E11006C23D4 /* Exceptions for "Tests" folder in "MoodifyAppUITests" target */,
-			);
-			path = Tests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -132,7 +105,6 @@
 			children = (
 				D697132F2D12026B006C23D4 /* Package.swift */,
 				D6971AFF2D123CD0006C23D4 /* Sources */,
-				D6971B0F2D123DF6006C23D4 /* Tests */,
 				D69712BB2D11E416006C23D4 /* Frameworks */,
 				D69712702D11C6A0006C23D4 /* Products */,
 			);
@@ -172,7 +144,6 @@
 			);
 			fileSystemSynchronizedGroups = (
 				D6971AFF2D123CD0006C23D4 /* Sources */,
-				D6971B0F2D123DF6006C23D4 /* Tests */,
 			);
 			name = MoodifyApp;
 			packageProductDependencies = (
@@ -473,7 +444,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_ASSET_PATHS = "\"MoodifyApp/Preview Content\"";
+				DEVELOPMENT_ASSET_PATHS = "Sources/MoodifyApp/Assets.xcassets\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -501,7 +472,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_ASSET_PATHS = "\"MoodifyApp/Preview Content\"";
+				DEVELOPMENT_ASSET_PATHS = "Sources/MoodifyApp/Assets.xcassets\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
