@@ -7,8 +7,8 @@
 
 import Foundation
 
-struct Response: Encodable {
-    var likert_scale: Int
-    var multiple_choice: String
-    var timestamp: String
+struct Response: Codable {
+    let likert_scale: Int
+    let multiple_choice: String
+    let timestamp: String
 }

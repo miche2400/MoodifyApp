@@ -3,7 +3,7 @@
 //  MoodifyApp
 //
 //  Created by Michelle Rodriguez on 17/12/2024.
-
+//
 
 import SwiftUI
 import Foundation
@@ -67,20 +67,32 @@ struct ContentView: View {
 
     private func submitResponses() {
         isLoading = true
-        let responseObjects = likertQuestions.map { question in
-            Response(
-                likert_scale: responses[question] ?? 0,
-                multiple_choice: "Default Choice",
-                timestamp: ISO8601DateFormatter().string(from: Date()) // Use ISO 8601 format for timestamp
-            )
+        let responseObjects: [Response] = likertQuestions.compactMap { question in
+            if let response = responses[question], response > 0 {
+                return Response(
+                    likert_scale: response,
+                    multiple_choice: "Default Choice",
+                    timestamp: ISO8601DateFormatter().string(from: Date())
+                )
+            } else {
+                return nil
+            }
+        }
+
+        guard !responseObjects.isEmpty else {
+            isLoading = false
+            errorMessage = "Please complete all questions before submitting."
+            return
         }
 
         SupabaseService.shared.submitResponses(responses: responseObjects) { success in
-            isLoading = false
-            if success {
-                print("Responses submitted successfully!")
-            } else {
-                errorMessage = "Failed to submit responses."
+            DispatchQueue.main.async {
+                isLoading = false
+                if success {
+                    print("Responses submitted successfully!")
+                } else {
+                    errorMessage = "Failed to submit responses."
+                }
             }
         }
     }
@@ -111,4 +123,3 @@ private let itemFormatter: DateFormatter = {
     formatter.timeStyle = .medium
     return formatter
 }()
-
