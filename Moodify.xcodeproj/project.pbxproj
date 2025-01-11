@@ -54,28 +54,18 @@
 		D63D21F32D31E77D00F5CBEB /* Exceptions for "Sources" folder in "MoodifyApp" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				MoodifyApp/.gitignore,
 				MoodifyApp/Info.plist,
 			);
 			target = D697126E2D11C6A0006C23D4 /* MoodifyApp */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
-/* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
-		D63D21F42D31E77D00F5CBEB /* Exceptions for "Sources" folder in "Compile Sources" phase from "MoodifyApp" target */ = {
-			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
-			buildPhase = D697126B2D11C6A0006C23D4 /* Sources */;
-			membershipExceptions = (
-				MoodifyApp/Info.plist,
-			);
-		};
-/* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		D6971AFF2D123CD0006C23D4 /* Sources */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				D63D21F32D31E77D00F5CBEB /* Exceptions for "Sources" folder in "MoodifyApp" target */,
-				D63D21F42D31E77D00F5CBEB /* Exceptions for "Sources" folder in "Compile Sources" phase from "MoodifyApp" target */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -256,7 +246,7 @@
 					};
 				};
 			};
-			buildConfigurationList = D697126A2D11C6A0006C23D4 /* Build configuration list for PBXProject "MoodifyApp" */;
+			buildConfigurationList = D697126A2D11C6A0006C23D4 /* Build configuration list for PBXProject "Moodify" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -470,7 +460,8 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "Sources/MoodifyApp/Assets.xcassets\"";
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Sources/MoodifyApp/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -498,7 +489,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "Sources/MoodifyApp/Assets.xcassets\"";
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -588,7 +579,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		D697126A2D11C6A0006C23D4 /* Build configuration list for PBXProject "MoodifyApp" */ = {
+		D697126A2D11C6A0006C23D4 /* Build configuration list for PBXProject "Moodify" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D69712962D11C6A4006C23D4 /* Debug */,

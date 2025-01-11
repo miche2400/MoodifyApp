@@ -25,24 +25,20 @@ class SupabaseService {
     func submitResponses(responses: [Response], completion: @escaping (Bool) -> Void) {
         Task {
             do {
-                let response = try await client
+                let _ = try await client
                     .from("responses")
                     .insert(responses)
                     .execute()
-
-                if response.error == nil {
-                    print("Data inserted successfully.")
-                    completion(true)
-                } else {
-                    print("Error inserting data: \(response.error?.localizedDescription ?? "Unknown error")")
-                    completion(false)
-                }
+                
+                print("Data inserted successfully.")
+                completion(true)
             } catch {
                 print("Error during data insertion: \(error.localizedDescription)")
                 completion(false)
             }
         }
     }
+
 
     // MARK: - Fetch Responses
     func fetchResponses(completion: @escaping ([SupabaseItem]) -> Void) {
@@ -52,20 +48,17 @@ class SupabaseService {
                     .from("responses")
                     .select()
                     .execute()
-
-                guard response.error == nil, let data = response.data else {
-                    print("Error fetching data: \(response.error?.localizedDescription ?? "Unknown error")")
-                    completion([])
-                    return
-                }
-
-                let items = try JSONDecoder().decode([SupabaseItem].self, from: data)
+                
+                // Directly use response.data since it's non-optional
+                let items = try JSONDecoder().decode([SupabaseItem].self, from: response.data)
                 print("Fetched items successfully: \(items)")
                 completion(items)
             } catch {
                 print("Error fetching data: \(error.localizedDescription)")
-                completion([])
+                completion([])  // Return an empty array in case of error
             }
         }
     }
+
+
 }

@@ -14,13 +14,13 @@ let package = Package(
         )
     ],
     dependencies: [
-        .package(url: "https://github.com/supabase/supabase-swift.git", from: "0.2.0") // Supabase dependency
+        .package(url: "https://github.com/supabase/supabase-swift.git", from: "2.0.0") // Only one Supabase import
     ],
     targets: [
         .target(
             name: "MoodifyApp",
             dependencies: [
-                .product(name: "Supabase", package: "supabase-swift") 
+                .product(name: "Supabase", package: "supabase-swift")  // Only one Supabase import here
             ],
             path: "Sources/MoodifyApp",
             resources: [

@@ -1,10 +1,8 @@
-//
 //  ContentView.swift
 //  MoodifyApp
 //
 //  Created by Michelle Rodriguez on 17/12/2024.
 //
-
 import SwiftUI
 import Foundation
 import Supabase
@@ -35,6 +33,10 @@ struct ContentView: View {
                     Text(errorMessage)
                         .foregroundColor(.red)
                 }
+                Button("Test Supabase Connection") {
+                    testSupabaseConnection()
+                }
+                .padding()
             }
             .navigationTitle("Moodify")
             .onAppear {
@@ -45,7 +47,7 @@ struct ContentView: View {
 
     private var formView: some View {
         Form {
-            ForEach(likertQuestions, id: \.self) { question in
+            ForEach(likertQuestions, id: \ .self) { question in
                 Section(header: Text(question)) {
                     Picker("Response", selection: $responses[question]) {
                         Text("Strongly Disagree").tag(1)
@@ -106,6 +108,17 @@ struct ContentView: View {
                 if fetchedItems.isEmpty {
                     errorMessage = "No data fetched."
                 }
+            }
+        }
+    }
+
+    private func testSupabaseConnection() {
+        let testResponse = Response(likert_scale: 3, multiple_choice: "Test Choice", timestamp: ISO8601DateFormatter().string(from: Date()))
+        SupabaseService.shared.submitResponses(responses: [testResponse]) { success in
+            if success {
+                print("✅ Supabase Connection Successful!")
+            } else {
+                print("❌ Supabase Connection Failed!")
             }
         }
     }
