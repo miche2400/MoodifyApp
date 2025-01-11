@@ -50,9 +50,33 @@
 		D697132F2D12026B006C23D4 /* Package.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Package.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		D63D21F32D31E77D00F5CBEB /* Exceptions for "Sources" folder in "MoodifyApp" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				MoodifyApp/Info.plist,
+			);
+			target = D697126E2D11C6A0006C23D4 /* MoodifyApp */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
+		D63D21F42D31E77D00F5CBEB /* Exceptions for "Sources" folder in "Compile Sources" phase from "MoodifyApp" target */ = {
+			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
+			buildPhase = D697126B2D11C6A0006C23D4 /* Sources */;
+			membershipExceptions = (
+				MoodifyApp/Info.plist,
+			);
+		};
+/* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		D6971AFF2D123CD0006C23D4 /* Sources */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				D63D21F32D31E77D00F5CBEB /* Exceptions for "Sources" folder in "MoodifyApp" target */,
+				D63D21F42D31E77D00F5CBEB /* Exceptions for "Sources" folder in "Compile Sources" phase from "MoodifyApp" target */,
+			);
 			path = Sources;
 			sourceTree = "<group>";
 		};

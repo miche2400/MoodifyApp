@@ -1,4 +1,3 @@
-//
 //  SupabaseClient.swift
 //  MoodifyApp
 //
@@ -13,8 +12,8 @@ class SupabaseService {
     private let client: SupabaseClient
 
     private init() {
-        guard let supabaseURLString = Bundle.main.infoDictionary?["https://djmpjkmbodnteepykdva.supabase.co"] as? String,
-              let supabaseKey = Bundle.main.infoDictionary?["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqbXBqa21ib2RudGVlcHlrZHZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzE1MjExODcsImV4cCI6MjA0NzA5NzE4N30.7ftI6sivTBcM21M9Seq68AhCEyVRzouq_7OIDRoeZoI"] as? String,
+        guard let supabaseURLString = Bundle.main.infoDictionary?["SUPABASE_URL"] as? String,
+              let supabaseKey = Bundle.main.infoDictionary?["SUPABASE_KEY"] as? String,
               let supabaseURL = URL(string: supabaseURLString) else {
             fatalError("Supabase credentials are missing in Info.plist")
         }
@@ -29,15 +28,13 @@ class SupabaseService {
                 let response = try await client
                     .from("responses")
                     .insert(responses)
-                    .select() // Selecting to get back the inserted data
                     .execute()
 
-                // Directly check the status or print the returned data
-                if response.status == 201 {
+                if response.error == nil {
                     print("Data inserted successfully.")
                     completion(true)
                 } else {
-                    print("Insertion failed with status: \(response.status)")
+                    print("Error inserting data: \(response.error?.localizedDescription ?? "Unknown error")")
                     completion(false)
                 }
             } catch {
@@ -47,18 +44,22 @@ class SupabaseService {
         }
     }
 
-    // MARK: - Fetch Responses (Fixed)
+    // MARK: - Fetch Responses
     func fetchResponses(completion: @escaping ([SupabaseItem]) -> Void) {
         Task {
             do {
-                // Execute the query and fetch results
                 let response = try await client
                     .from("responses")
                     .select()
                     .execute()
 
-                // Directly use the non-optional response data
-                let items = try JSONDecoder().decode([SupabaseItem].self, from: response.data)
+                guard response.error == nil, let data = response.data else {
+                    print("Error fetching data: \(response.error?.localizedDescription ?? "Unknown error")")
+                    completion([])
+                    return
+                }
+
+                let items = try JSONDecoder().decode([SupabaseItem].self, from: data)
                 print("Fetched items successfully: \(items)")
                 completion(items)
             } catch {
@@ -67,5 +68,4 @@ class SupabaseService {
             }
         }
     }
-
 }
