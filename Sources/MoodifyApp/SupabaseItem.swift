@@ -8,8 +8,10 @@
 
 import Foundation
 
+
 struct SupabaseItem: Codable {
-    let likert_scale: Int
-    let multiple_choice: String
-    let timestamp: String
+    let id: UUID?
+    let question: String
+    let answer: String
+    let created_at: String?
 }

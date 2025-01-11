@@ -8,7 +8,6 @@
 import Foundation
 
 struct Response: Codable {
-    let likert_scale: Int
-    let multiple_choice: String
-    let timestamp: String
+    let question: String
+    let answer: String
 }

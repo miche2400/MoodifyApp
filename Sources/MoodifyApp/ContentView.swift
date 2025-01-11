@@ -8,7 +8,7 @@ import Foundation
 import Supabase
 
 struct ContentView: View {
-    @State private var responses: [String: Int] = [:] // Store Likert scale responses
+    @State private var responses: [String: String] = [:] // Store answers
     @State private var items: [SupabaseItem] = [] // Store Supabase data
     @State private var isLoading: Bool = false
     @State private var errorMessage: String?
@@ -50,11 +50,11 @@ struct ContentView: View {
             ForEach(likertQuestions, id: \ .self) { question in
                 Section(header: Text(question)) {
                     Picker("Response", selection: $responses[question]) {
-                        Text("Strongly Disagree").tag(1)
-                        Text("Disagree").tag(2)
-                        Text("Neutral").tag(3)
-                        Text("Agree").tag(4)
-                        Text("Strongly Agree").tag(5)
+                        Text("Strongly Disagree").tag("Strongly Disagree")
+                        Text("Disagree").tag("Disagree")
+                        Text("Neutral").tag("Neutral")
+                        Text("Agree").tag("Agree")
+                        Text("Strongly Agree").tag("Strongly Agree")
                     }
                     .pickerStyle(SegmentedPickerStyle())
                 }
@@ -70,11 +70,10 @@ struct ContentView: View {
     private func submitResponses() {
         isLoading = true
         let responseObjects: [Response] = likertQuestions.compactMap { question in
-            if let response = responses[question], response > 0 {
+            if let response = responses[question], !response.isEmpty {
                 return Response(
-                    likert_scale: response,
-                    multiple_choice: "Default Choice",
-                    timestamp: ISO8601DateFormatter().string(from: Date())
+                    question: question,
+                    answer: response
                 )
             } else {
                 return nil
@@ -113,7 +112,7 @@ struct ContentView: View {
     }
 
     private func testSupabaseConnection() {
-        let testResponse = Response(likert_scale: 3, multiple_choice: "Test Choice", timestamp: ISO8601DateFormatter().string(from: Date()))
+        let testResponse = Response(question: "Test Question", answer: "Test Answer")
         SupabaseService.shared.submitResponses(responses: [testResponse]) { success in
             if success {
                 print("✅ Supabase Connection Successful!")

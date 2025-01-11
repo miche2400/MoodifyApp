@@ -25,9 +25,13 @@ class SupabaseService {
     func submitResponses(responses: [Response], completion: @escaping (Bool) -> Void) {
         Task {
             do {
+                let responseDictionaries = responses.map { response in
+                    ["question": response.question, "answer": response.answer]
+                }
+
                 let _ = try await client
                     .from("responses")
-                    .insert(responses)
+                    .insert(responseDictionaries)
                     .execute()
                 
                 print("Data inserted successfully.")
@@ -49,16 +53,13 @@ class SupabaseService {
                     .select()
                     .execute()
                 
-                // Directly use response.data since it's non-optional
                 let items = try JSONDecoder().decode([SupabaseItem].self, from: response.data)
                 print("Fetched items successfully: \(items)")
                 completion(items)
             } catch {
                 print("Error fetching data: \(error.localizedDescription)")
-                completion([])  // Return an empty array in case of error
+                completion([])
             }
         }
     }
-
-
 }
