@@ -1,0 +1,11 @@
+# Ignore sensitive files
+Info.plist
+
+# Ignore Xcode-related files
+*.xcuserdatad
+*.xcscmblueprint
+.DS_Store
+DerivedData/
+
+
+
