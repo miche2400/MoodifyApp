@@ -22,8 +22,12 @@ struct ContentView: View {
     ]
 
     var body: some View {
-        NavigationView {
+        ScrollView {
             VStack {
+                Text("Moodify")
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+                    .padding()
                 if isLoading {
                     ProgressView()
                 } else {
@@ -32,23 +36,27 @@ struct ContentView: View {
                 if let errorMessage = errorMessage {
                     Text(errorMessage)
                         .foregroundColor(.red)
+                        .padding()
                 }
                 Button("Test Supabase Connection") {
                     testSupabaseConnection()
                 }
                 .padding()
             }
-            .navigationTitle("Moodify")
-            .onAppear {
-                fetchItems()
-            }
+            .padding()
+        }
+        .navigationTitle("Moodify")
+        .onAppear {
+            fetchItems()
         }
     }
 
     private var formView: some View {
-        Form {
+        VStack(spacing: 20) {
             ForEach(likertQuestions, id: \ .self) { question in
-                Section(header: Text(question)) {
+                VStack(alignment: .leading) {
+                    Text(question)
+                        .font(.headline)
                     Picker("Response", selection: $responses[question]) {
                         Text("Strongly Disagree").tag("Strongly Disagree")
                         Text("Disagree").tag("Disagree")
@@ -58,13 +66,13 @@ struct ContentView: View {
                     }
                     .pickerStyle(SegmentedPickerStyle())
                 }
+                .padding()
             }
             Button("Submit") {
                 submitResponses()
             }
             .padding()
         }
-        .listStyle(GroupedListStyle())
     }
 
     private func submitResponses() {
