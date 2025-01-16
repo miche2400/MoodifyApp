@@ -1,8 +1,3 @@
-//  ContentView.swift
-//  MoodifyApp
-//
-//  Created by Michelle Rodriguez on 17/12/2024.
-//
 import SwiftUI
 import Foundation
 import Supabase
@@ -22,67 +17,61 @@ struct ContentView: View {
     ]
 
     var body: some View {
-        ScrollView {
-            VStack {
-                Text("Moodify")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                    .padding()
-                if isLoading {
-                    ProgressView()
-                } else {
-                    formView
-                }
-                if let errorMessage = errorMessage {
-                    Text(errorMessage)
-                        .foregroundColor(.red)
-                        .padding()
-                }
-                Button("Test Supabase Connection") {
-                    testSupabaseConnection()
-                }
-                .padding()
-            }
-            .padding()
-        }
-        .navigationTitle("Moodify")
-        .onAppear {
-            fetchItems()
-        }
-    }
+        NavigationView {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    Text("Moodify")
+                        .font(.largeTitle)
+                        .bold()
+                        .frame(maxWidth: .infinity, alignment: .center)
 
-    private var formView: some View {
-        VStack(spacing: 20) {
-            ForEach(likertQuestions, id: \ .self) { question in
-                VStack(alignment: .leading) {
-                    Text(question)
-                        .font(.headline)
-                    Picker("Response", selection: $responses[question]) {
-                        Text("Strongly Disagree").tag("Strongly Disagree")
-                        Text("Disagree").tag("Disagree")
-                        Text("Neutral").tag("Neutral")
-                        Text("Agree").tag("Agree")
-                        Text("Strongly Agree").tag("Strongly Agree")
+                    ForEach(likertQuestions, id: \.self) { question in
+                        VStack(alignment: .leading) {
+                            Text(question)
+                                .font(.headline)
+                                .padding(.bottom, 5)
+
+                            Picker("Response", selection: $responses[question]) {
+                                Text("Strongly Disagree").tag("Strongly Disagree")
+                                Text("Disagree").tag("Disagree")
+                                Text("Neutral").tag("Neutral")
+                                Text("Agree").tag("Agree")
+                                Text("Strongly Agree").tag("Strongly Agree")
+                            }
+                            .pickerStyle(SegmentedPickerStyle())
+                            .padding(.bottom)
+                        }
                     }
-                    .pickerStyle(SegmentedPickerStyle())
+
+                    Button("Submit") {
+                        submitResponses()
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.blue)
+                    .foregroundColor(.white)
+                    .cornerRadius(10)
+
+                    if let errorMessage = errorMessage {
+                        Text(errorMessage)
+                            .foregroundColor(.red)
+                            .padding()
+                    }
                 }
                 .padding()
             }
-            Button("Submit") {
-                submitResponses()
-            }
-            .padding()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .edgesIgnoringSafeArea(.all) // This will ignore safe area and fill the entire screen
+            .background(Color(.systemBackground))
         }
+        .navigationViewStyle(StackNavigationViewStyle()) // Full screen behavior for all devices
     }
 
     private func submitResponses() {
         isLoading = true
         let responseObjects: [Response] = likertQuestions.compactMap { question in
             if let response = responses[question], !response.isEmpty {
-                return Response(
-                    question: question,
-                    answer: response
-                )
+                return Response(question: question, answer: response)
             } else {
                 return nil
             }
@@ -97,49 +86,8 @@ struct ContentView: View {
         SupabaseService.shared.submitResponses(responses: responseObjects) { success in
             DispatchQueue.main.async {
                 isLoading = false
-                if success {
-                    print("Responses submitted successfully!")
-                } else {
-                    errorMessage = "Failed to submit responses."
-                }
-            }
-        }
-    }
-
-    private func fetchItems() {
-        isLoading = true
-        SupabaseService.shared.fetchResponses { fetchedItems in
-            DispatchQueue.main.async {
-                isLoading = false
-                self.items = fetchedItems
-                if fetchedItems.isEmpty {
-                    errorMessage = "No data fetched."
-                }
-            }
-        }
-    }
-
-    private func testSupabaseConnection() {
-        let testResponse = Response(question: "Test Question", answer: "Test Answer")
-        SupabaseService.shared.submitResponses(responses: [testResponse]) { success in
-            if success {
-                print("✅ Supabase Connection Successful!")
-            } else {
-                print("❌ Supabase Connection Failed!")
+                errorMessage = success ? "✅ Responses submitted successfully!" : "❌ Failed to submit responses."
             }
         }
     }
 }
-
-private let dateFormatter: DateFormatter = {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
-    return formatter
-}()
-
-private let itemFormatter: DateFormatter = {
-    let formatter = DateFormatter()
-    formatter.dateStyle = .short
-    formatter.timeStyle = .medium
-    return formatter
-}()
