@@ -1,3 +1,9 @@
+//
+//  ContentView.swift
+//  MoodifyApp
+//
+//  Created by Michelle Rodriguez on 17/12/2024.
+//
 import SwiftUI
 import Foundation
 import Supabase
@@ -6,6 +12,8 @@ struct ContentView: View {
     @State private var responses: [String: String] = [:] // Store answers
     @State private var items: [SupabaseItem] = [] // Store Supabase data
     @State private var isLoading: Bool = false
+    @State private var isButtonPressed: Bool = false // Track button press state
+    @State private var showError: Bool = false // Track error state
 
     private let likertQuestions = [
         "I feel content and satisfied with my current situation.",
@@ -15,52 +23,119 @@ struct ContentView: View {
         "I feel a bit down or low-spirited."
     ]
 
+    private let answerOptions = [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+    ]
+
     var body: some View {
         NavigationView {
             ZStack {
                 Color(.systemBackground)
-                    .ignoresSafeArea() // Ensure the background fills the screen
+                    .ignoresSafeArea(.all) // Ensure the background fills the screen
 
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 20) {
+                    VStack(alignment: .leading, spacing: 30) {
                         Text("Moodify")
                             .font(.largeTitle)
                             .bold()
                             .frame(maxWidth: .infinity, alignment: .center)
-                            .padding(.top)
+                            .padding(.top, 40)
 
                         ForEach(likertQuestions, id: \.self) { question in
-                            VStack(alignment: .leading) {
+                            VStack(alignment: .leading, spacing: 15) {
                                 Text(question)
                                     .font(.headline)
-                                    .padding(.bottom, 5)
+                                    .padding(.horizontal, 20)
 
-                                Picker("Response", selection: $responses[question]) {
-                                    Text("Strongly Disagree").tag("Strongly Disagree")
-                                    Text("Disagree").tag("Disagree")
-                                    Text("Neutral").tag("Neutral")
-                                    Text("Agree").tag("Agree")
-                                    Text("Strongly Agree").tag("Strongly Agree")
+                                // Vertical Answer Options
+                                VStack(alignment: .leading, spacing: 10) {
+                                    ForEach(answerOptions, id: \.self) { option in
+                                        Button(action: {
+                                            responses[question] = option
+                                            checkAndHideError()
+                                        }) {
+                                            HStack {
+                                                Circle()
+                                                    .fill(responses[question] == option ? Color.blue : Color.gray)
+                                                    .frame(width: 20, height: 20)
+                                                Text(option)
+                                                    .font(.body)
+                                                    .foregroundColor(.primary)
+                                            }
+                                            .padding()
+                                            .background(Color(.systemGray6))
+                                            .cornerRadius(8)
+                                        }
+                                    }
                                 }
-                                .pickerStyle(SegmentedPickerStyle())
-                                .padding(.bottom)
+                                .padding(.horizontal, 20)
                             }
                         }
 
-                        Button("Submit") {
-                            submitResponses()
+                        Button(action: {
+                            if validateResponses() {
+                                isButtonPressed = true
+                                submitResponses()
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                                    isButtonPressed = false
+                                }
+                            } else {
+                                showError = true
+                            }
+                        }) {
+                            Text("Submit")
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(isButtonPressed ? Color.blue.opacity(0.7) : Color.blue)
+                                .foregroundColor(.white)
+                                .cornerRadius(10)
+                                .scaleEffect(isButtonPressed ? 0.95 : 1.0)
+                                .animation(.easeInOut(duration: 0.2), value: isButtonPressed)
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 10)
                     }
-                    .padding()
+                    .padding(.bottom, 40) // Add space at the bottom of the scroll view
+                }
+
+                // Error alert
+                if showError {
+                    VStack {
+                        Text("Please answer all questions.")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .padding()
+                            .background(Color.red)
+                            .cornerRadius(10)
+                            .padding(.horizontal, 20)
+                        Spacer()
+                    }
+                    .animation(.easeInOut, value: showError)
+                    .transition(.opacity)
                 }
             }
+            .navigationBarHidden(true)
         }
-        .navigationViewStyle(StackNavigationViewStyle()) // Consistent navigation behavior
+    }
+
+    private func validateResponses() -> Bool {
+        // Ensure all questions have been answered
+        return likertQuestions.allSatisfy { question in
+            responses[question] != nil
+        }
+    }
+
+    private func checkAndHideError() {
+        // Automatically hide the error when all questions are answered
+        if validateResponses() {
+            withAnimation {
+                showError = false
+            }
+        }
     }
 
     private func submitResponses() {
