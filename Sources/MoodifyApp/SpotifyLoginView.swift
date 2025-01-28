@@ -15,13 +15,6 @@ struct SpotifyLoginView: View {
         VStack(spacing: 30) {
             Spacer()
 
-            // App Logo
-            Image("music logo design")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 200, height: 200)
-                .accessibility(label: Text("App logo"))
-
             // App Title
             Text("Moodify - Your Emotional DJ")
                 .font(.largeTitle)

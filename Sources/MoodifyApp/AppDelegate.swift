@@ -1,18 +1,34 @@
-//
-//  AppDelegate.swift
-//  MoodifyApp
-//
-//  Created by Michelle Rodriguez on 27/01/2025.
-//
 import UIKit
 
 class AppDelegate: UIResponder, UIApplicationDelegate {
+
+    var window: UIWindow?
+
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
+        // Quick UI setup
+        setupQuickLaunchContent()
+
+        // Defer heavy initializations
+        performDeferredInitializations()
+
         print("App launched successfully")
         return true
+    }
+
+    func setupQuickLaunchContent() {
+        // Initialize the window and set a basic view controller if not using Storyboards
+        window = UIWindow()
+        window?.rootViewController = ViewController() // Adjust ViewController to your actual initial view controller
+        window?.makeKeyAndVisible()
+    }
+
+    func performDeferredInitializations() {
+        DispatchQueue.global(qos: .background).async {
+            // Perform heavy tasks here like data preloading or complex setup
+        }
     }
 
     // Handle custom URL scheme redirects
@@ -41,5 +57,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         }
 
         return true
+    }
+}
+
+class ViewController: UIViewController {
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        view.backgroundColor = .white // Set a default background color
     }
 }
