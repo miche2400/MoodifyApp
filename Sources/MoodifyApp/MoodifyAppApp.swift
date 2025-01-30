@@ -9,32 +9,24 @@ import SwiftUI
 
 @main
 struct MoodifyAppApp: App {
-    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate // Link AppDelegate
-    @State private var isLoggedIn: Bool = false // Track Spotify login state
-    @State private var isLaunchScreenVisible: Bool = true // Show launch screen first
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    @AppStorage("UserLoggedIn") private var isLoggedIn: Bool = false // Persistent login state
 
     var body: some Scene {
         WindowGroup {
             ZStack {
-                if isLaunchScreenVisible {
-                    Color.white.ignoresSafeArea() // Prevents black screen
-                } else if isLoggedIn {
-                    ContentView() // Show questionnaire after login
+                if isLoggedIn {
+                    ContentView()
+                        .transition(.opacity)
                 } else {
                     SpotifyLoginView(isLoggedIn: $isLoggedIn)
+                        .transition(.opacity)
                 }
             }
+            .animation(.easeInOut(duration: 0.5), value: isLoggedIn) 
             .onAppear {
                 setupNotificationListeners()
-                showLaunchScreen()
             }
-        }
-    }
-
-    // MARK: - Show LaunchScreen for 2 Seconds
-    private func showLaunchScreen() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            isLaunchScreenVisible = false
         }
     }
 

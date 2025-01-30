@@ -4,17 +4,17 @@
 //
 //  Created by Michelle Rodriguez on 17/12/2024.
 //
+
 import SwiftUI
 import Foundation
 import Supabase
 
 struct ContentView: View {
     @State private var responses: [String: String] = [:] // Store answers
-    @State private var items: [SupabaseItem] = [] // Store Supabase data
     @State private var isLoading: Bool = false
-    @State private var isButtonPressed: Bool = false // Track button press state
-    @State private var showError: Bool = false // Track error state
-
+    @State private var showError: Bool = false
+    @State private var isSubmitted: Bool = false // Track submission status
+    
     private let likertQuestions = [
         "I feel content and satisfied with my current situation.",
         "I am feeling a bit stressed or overwhelmed.",
@@ -22,7 +22,7 @@ struct ContentView: View {
         "I am feeling energetic and ready to take on challenges.",
         "I feel a bit down or low-spirited."
     ]
-
+    
     private let answerOptions = [
         "Strongly Disagree",
         "Disagree",
@@ -30,20 +30,24 @@ struct ContentView: View {
         "Agree",
         "Strongly Agree"
     ]
-
+    
     var body: some View {
         NavigationView {
             ZStack {
                 Color(.systemBackground)
-                    .ignoresSafeArea(.all) // Ensure the background fills the screen
+                    .ignoresSafeArea()
 
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 30) {
+                    VStack(alignment: .leading, spacing: 25) {
                         Text("Moodify")
                             .font(.largeTitle)
                             .bold()
                             .frame(maxWidth: .infinity, alignment: .center)
-                            .padding(.top, 40)
+                            .padding(.top, 30)
+
+                        ProgressView(value: progress, total: 1.0)
+                            .progressViewStyle(LinearProgressViewStyle(tint: .blue))
+                            .padding(.horizontal, 20)
 
                         ForEach(likertQuestions, id: \.self) { question in
                             VStack(alignment: .leading, spacing: 15) {
@@ -51,7 +55,6 @@ struct ContentView: View {
                                     .font(.headline)
                                     .padding(.horizontal, 20)
 
-                                // Vertical Answer Options
                                 VStack(alignment: .leading, spacing: 10) {
                                     ForEach(answerOptions, id: \.self) { option in
                                         Button(action: {
@@ -60,15 +63,15 @@ struct ContentView: View {
                                         }) {
                                             HStack {
                                                 Circle()
-                                                    .fill(responses[question] == option ? Color.blue : Color.gray)
+                                                    .fill(responses[question] == option ? Color.blue : Color.gray.opacity(0.3))
                                                     .frame(width: 20, height: 20)
                                                 Text(option)
                                                     .font(.body)
                                                     .foregroundColor(.primary)
                                             }
                                             .padding()
-                                            .background(Color(.systemGray6))
-                                            .cornerRadius(8)
+                                            .background(responses[question] == option ? Color.blue.opacity(0.2) : Color(.systemGray6))
+                                            .cornerRadius(10)
                                         }
                                     }
                                 }
@@ -76,36 +79,35 @@ struct ContentView: View {
                             }
                         }
 
-                        Button(action: {
-                            if validateResponses() {
-                                isButtonPressed = true
-                                submitResponses()
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                                    isButtonPressed = false
+                        Button(action: submitResponses) {
+                            HStack {
+                                if isLoading {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                        .scaleEffect(1.2)
+                                } else {
+                                    Text(isSubmitted ? "Submitted!" : "Submit")
+                                        .fontWeight(.bold)
                                 }
-                            } else {
-                                showError = true
                             }
-                        }) {
-                            Text("Submit")
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(isButtonPressed ? Color.blue.opacity(0.7) : Color.blue)
-                                .foregroundColor(.white)
-                                .cornerRadius(10)
-                                .scaleEffect(isButtonPressed ? 0.95 : 1.0)
-                                .animation(.easeInOut(duration: 0.2), value: isButtonPressed)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(isSubmitted ? Color.green : Color.blue)
+                            .foregroundColor(.white)
+                            .cornerRadius(12)
+                            .scaleEffect(isLoading ? 0.95 : 1.0)
+                            .animation(.easeInOut(duration: 0.2), value: isLoading)
                         }
                         .padding(.horizontal, 20)
                         .padding(.top, 10)
+                        .disabled(isLoading || isSubmitted) // Prevent multiple taps
                     }
-                    .padding(.bottom, 40) // Add space at the bottom of the scroll view
+                    .padding(.bottom, 40)
                 }
 
-                // Error alert
                 if showError {
                     VStack {
-                        Text("Please answer all questions.")
+                        Text("⚠️ Please answer all questions.")
                             .font(.headline)
                             .foregroundColor(.white)
                             .padding()
@@ -122,15 +124,17 @@ struct ContentView: View {
         }
     }
 
+    // MARK: - Progress Calculation
+    private var progress: Double {
+        return Double(responses.count) / Double(likertQuestions.count)
+    }
+
+    // MARK: - Form Validation
     private func validateResponses() -> Bool {
-        // Ensure all questions have been answered
-        return likertQuestions.allSatisfy { question in
-            responses[question] != nil
-        }
+        return likertQuestions.allSatisfy { responses[$0] != nil }
     }
 
     private func checkAndHideError() {
-        // Automatically hide the error when all questions are answered
         if validateResponses() {
             withAnimation {
                 showError = false
@@ -138,24 +142,29 @@ struct ContentView: View {
         }
     }
 
+    // MARK: - Submission Handling
     private func submitResponses() {
+        if !validateResponses() {
+            showError = true
+            return
+        }
+
         isLoading = true
         let responseObjects: [Response] = likertQuestions.compactMap { question in
             if let response = responses[question], !response.isEmpty {
                 return Response(question: question, answer: response)
-            } else {
-                return nil
             }
-        }
-
-        guard !responseObjects.isEmpty else {
-            isLoading = false
-            return
+            return nil
         }
 
         SupabaseService.shared.submitResponses(responses: responseObjects) { success in
             DispatchQueue.main.async {
                 isLoading = false
+                if success {
+                    isSubmitted = true
+                } else {
+                    showError = true
+                }
             }
         }
     }
