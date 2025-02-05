@@ -1,3 +1,9 @@
+//
+//  SpotifyAuthManager.swift
+//  MoodifyApp
+//
+//  Created by Michelle Rodriguez on 17/12/2024.
+//
 import Foundation
 import UIKit
 import CryptoKit
@@ -15,8 +21,6 @@ class SpotifyAuthManager {
     private let tokenExpirationKey = "SpotifyTokenExpirationDate"
     private let codeVerifierKey = "SpotifyCodeVerifier"
 
-    private var codeVerifier: String?
-
     var isTokenValid: Bool {
         guard let expirationDate = UserDefaults.standard.object(forKey: tokenExpirationKey) as? Date else { return false }
         return expirationDate > Date()
@@ -31,7 +35,10 @@ class SpotifyAuthManager {
     private func generateCodeChallenge(from verifier: String) -> String {
         guard let verifierData = verifier.data(using: .utf8) else { return "" }
         let hashed = SHA256.hash(data: verifierData)
-        return hashed.compactMap { String(format: "%02x", $0) }.joined()
+        return Data(hashed).base64EncodedString()
+            .replacingOccurrences(of: "=", with: "")
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
     }
 
     // MARK: - Authenticate User with PKCE
@@ -44,11 +51,8 @@ class SpotifyAuthManager {
             return
         }
 
-        // ✅ Generate PKCE values
         let verifier = generateCodeVerifier()
         let challenge = generateCodeChallenge(from: verifier)
-
-        // ✅ Store `code_verifier` for later token exchange
         UserDefaults.standard.set(verifier, forKey: codeVerifierKey)
 
         let authURLString = "\(authBaseURL)?client_id=\(clientID)&response_type=code&redirect_uri=\(redirectURI)&scope=\(encodedScope)&code_challenge_method=S256&code_challenge=\(challenge)"
@@ -60,17 +64,14 @@ class SpotifyAuthManager {
         }
 
         DispatchQueue.main.async {
-            UIApplication.shared.open(authURL, options: [:]) { success in
-                if success {
-                    print("✅ Opened Spotify login successfully.")
-                } else {
-                    print("❌ Failed to open Spotify login.")
-                }
+            UIApplication.shared.open(authURL) { success in
+                print(success ? "✅ Opened Spotify login successfully." : "❌ Failed to open Spotify login.")
+                completion(success)
             }
         }
     }
 
-    // MARK: - Handle Redirect URL
+    // MARK: - Handle Redirect URL (Fix for AppDelegate)
     func handleRedirect(url: URL, completion: @escaping (Bool) -> Void) {
         guard let code = URLComponents(string: url.absoluteString)?
                 .queryItems?
@@ -84,7 +85,7 @@ class SpotifyAuthManager {
         exchangeCodeForToken(code: code, completion: completion)
     }
 
-    // MARK: - Exchange Authorization Code for Token (PKCE)
+    // MARK: - Exchange Authorization Code for Token
     private func exchangeCodeForToken(code: String, completion: @escaping (Bool) -> Void) {
         guard let codeVerifier = UserDefaults.standard.string(forKey: codeVerifierKey) else {
             print("❌ Error: No stored code verifier for PKCE.")
@@ -98,7 +99,7 @@ class SpotifyAuthManager {
         request.httpBody = bodyParams.data(using: .utf8)
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
 
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        URLSession.shared.dataTask(with: request) { data, _, error in
             if let error = error {
                 print("❌ Error during token exchange: \(error.localizedDescription)")
                 completion(false)
@@ -108,29 +109,30 @@ class SpotifyAuthManager {
             guard let data = data,
                   let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
                   let accessToken = json["access_token"] as? String,
-                  let expiresIn = json["expires_in"] as? Int else {
+                  let expiresIn = json["expires_in"] as? Int,
+                  let refreshToken = json["refresh_token"] as? String else {
                 print("❌ Error: Failed to parse token response.")
                 completion(false)
                 return
             }
 
-            // Save tokens
+            // Store tokens
             UserDefaults.standard.set(accessToken, forKey: self.accessTokenKey)
+            UserDefaults.standard.set(refreshToken, forKey: self.refreshTokenKey)
             UserDefaults.standard.set(Date().addingTimeInterval(TimeInterval(expiresIn)), forKey: self.tokenExpirationKey)
-
-            if let refreshToken = json["refresh_token"] as? String {
-                UserDefaults.standard.set(refreshToken, forKey: self.refreshTokenKey)
+            print("✅ Access and refresh token received successfully.")
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: Notification.Name("SpotifyLoginSuccess"), object: nil)
             }
-
-            print("✅ Access token received successfully.")
             completion(true)
         }.resume()
     }
 
     // MARK: - Refresh Access Token
-    func refreshTokenIfNeeded(completion: @escaping (Bool) -> Void) {
-        guard !isTokenValid, let refreshToken = UserDefaults.standard.string(forKey: refreshTokenKey) else {
-            completion(isTokenValid)
+    func refreshAccessToken(completion: @escaping (Bool) -> Void) {
+        guard let refreshToken = UserDefaults.standard.string(forKey: refreshTokenKey) else {
+            print("⚠️ No refresh token available. User must log in again.")
+            completion(false)
             return
         }
 
@@ -140,10 +142,9 @@ class SpotifyAuthManager {
         request.httpBody = bodyParams.data(using: .utf8)
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
 
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        URLSession.shared.dataTask(with: request) { data, _, error in
             if let error = error {
                 print("❌ Error refreshing token: \(error.localizedDescription)")
-                NotificationCenter.default.post(name: Notification.Name("SpotifyLoginFailure"), object: nil)
                 completion(false)
                 return
             }
@@ -153,17 +154,13 @@ class SpotifyAuthManager {
                   let accessToken = json["access_token"] as? String,
                   let expiresIn = json["expires_in"] as? Int else {
                 print("❌ Error: Failed to parse refresh token response.")
-                NotificationCenter.default.post(name: Notification.Name("SpotifyLoginFailure"), object: nil)
                 completion(false)
                 return
             }
 
-            // Update token and expiration
             UserDefaults.standard.set(accessToken, forKey: self.accessTokenKey)
             UserDefaults.standard.set(Date().addingTimeInterval(TimeInterval(expiresIn)), forKey: self.tokenExpirationKey)
-
             print("✅ Access token refreshed successfully.")
-            NotificationCenter.default.post(name: Notification.Name("SpotifyLoginSuccess"), object: nil)
             completion(true)
         }.resume()
     }

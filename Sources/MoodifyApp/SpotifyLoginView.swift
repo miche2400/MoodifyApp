@@ -73,18 +73,9 @@ struct SpotifyLoginView: View {
         }
         .background(Color(.systemBackground).ignoresSafeArea())
         .onAppear {
-            SpotifyAuthManager.shared.refreshTokenIfNeeded { success in
-                DispatchQueue.main.async {
-                    if success {
-                        print("✅ User already logged in. Redirecting...")
-                        isLoggedIn = true
-                    } else {
-                        isCheckingToken = false
-                    }
-                }
-            }
+            checkIfAlreadyLoggedIn()
+            setupLoginListeners()
         }
-
     }
 
     // MARK: - Spotify Authentication Flow
@@ -92,12 +83,16 @@ struct SpotifyLoginView: View {
         isAuthenticating = true
         authenticationError = nil
 
+        print("⏳ Starting Spotify authentication...")
+
         SpotifyAuthManager.shared.authenticate { success in
             DispatchQueue.main.async {
                 isAuthenticating = false
                 if success {
+                    print("✅ Authentication successful. Redirecting to app...")
                     isLoggedIn = true
                 } else {
+                    print("❌ Authentication failed.")
                     authenticationError = "Authentication failed. Please try again."
                 }
             }
@@ -106,14 +101,32 @@ struct SpotifyLoginView: View {
 
     // MARK: - Check If User Is Already Logged In
     private func checkIfAlreadyLoggedIn() {
-        SpotifyAuthManager.shared.refreshTokenIfNeeded { success in
+        print("🔄 Checking if user is already logged in...")
+
+        SpotifyAuthManager.shared.refreshAccessToken { success in
             DispatchQueue.main.async {
                 isCheckingToken = false // Hide loading state
 
                 if success {
+                    print("✅ User already logged in. Redirecting...")
                     isLoggedIn = true
+                } else {
+                    print("⚠️ No valid token found. User must log in.")
                 }
             }
+        }
+    }
+
+    // MARK: - Listen for Authentication Success
+    private func setupLoginListeners() {
+        NotificationCenter.default.addObserver(forName: Notification.Name("SpotifyLoginSuccess"), object: nil, queue: .main) { _ in
+            print("🎵 Login Success Notification Received. Redirecting user...")
+            isLoggedIn = true
+        }
+
+        NotificationCenter.default.addObserver(forName: Notification.Name("SpotifyLoginFailure"), object: nil, queue: .main) { _ in
+            print("⚠️ Login Failure Notification Received.")
+            authenticationError = "Login failed. Please try again."
         }
     }
 }

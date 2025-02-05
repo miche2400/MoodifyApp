@@ -23,8 +23,9 @@ struct MoodifyAppApp: App {
                         .transition(.opacity)
                 }
             }
-            .animation(.easeInOut(duration: 0.5), value: isLoggedIn) 
+            .animation(.easeInOut(duration: 0.5), value: isLoggedIn)
             .onAppear {
+                print("🔄 App started, checking login state: \(isLoggedIn)")
                 setupNotificationListeners()
             }
         }
@@ -34,12 +35,14 @@ struct MoodifyAppApp: App {
     private func setupNotificationListeners() {
         NotificationCenter.default.addObserver(forName: Notification.Name("SpotifyLoginSuccess"), object: nil, queue: .main) { _ in
             DispatchQueue.main.async {
+                print("✅ Spotify login detected! Updating state...")
                 isLoggedIn = true
             }
         }
 
         NotificationCenter.default.addObserver(forName: Notification.Name("SpotifyLoginFailure"), object: nil, queue: .main) { _ in
             DispatchQueue.main.async {
+                print("❌ Spotify login failed. Staying on login screen.")
                 isLoggedIn = false
             }
         }

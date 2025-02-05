@@ -8,7 +8,6 @@
 import UIKit
 
 class AppDelegate: UIResponder, UIApplicationDelegate {
-
     var window: UIWindow?
 
     func application(
@@ -16,47 +15,17 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
         print("🚀 App launched successfully")
-
-        // Quick UI setup
-        setupQuickLaunchContent()
-
-        // Defer heavy initializations
-        performDeferredInitializations()
-
         return true
     }
 
-    func setupQuickLaunchContent() {
-        // Initialize the window and set a basic view controller if not using Storyboards
-        window = UIWindow()
-        window?.rootViewController = ViewController() // Adjust ViewController to your actual initial view controller
-        window?.makeKeyAndVisible()
-        print("🖥️ UI setup complete")
-    }
+    func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
+        print("🔄 Received redirect URL: \(url.absoluteString)")
 
-    func performDeferredInitializations() {
-        DispatchQueue.global(qos: .background).async {
-            // Perform heavy tasks here like data preloading or complex setup
-            print("⏳ Performing deferred initializations...")
-        }
-    }
-
-    // MARK: - Handle Custom URL Scheme Redirects
-    func application(
-        _ app: UIApplication,
-        open url: URL,
-        options: [UIApplication.OpenURLOptionsKey: Any] = [:]
-    ) -> Bool {
-        print("🔄 Received URL: \(url.absoluteString)")
-
-        // Ensure the URL scheme matches the expected one
         guard url.scheme == "moodifyapp" else {
             print("❌ Error: Unrecognized URL scheme")
             return false
         }
 
-        // Handle the Spotify redirect
-        print("🔄 Handling Spotify redirect...")
         SpotifyAuthManager.shared.handleRedirect(url: url) { success in
             DispatchQueue.main.async {
                 if success {
@@ -68,16 +37,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                 }
             }
         }
-
         return true
-    }
-}
-
-// MARK: - Basic ViewController for UI
-class ViewController: UIViewController {
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        view.backgroundColor = .white // Set a default background color
-        print("🎨 ViewController initialized")
     }
 }
