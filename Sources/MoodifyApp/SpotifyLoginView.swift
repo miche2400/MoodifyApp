@@ -12,6 +12,7 @@ struct SpotifyLoginView: View {
     @State private var isAuthenticating: Bool = false
     @State private var authenticationError: String?
     @State private var isCheckingToken: Bool = true // Prevents UI flickering while checking token
+    @State private var hasTriedLogin: Bool = false // Tracks if login attempt has occurred
 
     var body: some View {
         VStack(spacing: 30) {
@@ -26,8 +27,8 @@ struct SpotifyLoginView: View {
                 .foregroundColor(.primary)
                 .accessibility(label: Text("Moodify - Your Emotional DJ"))
 
-            // Display Error Message (if any)
-            if let error = authenticationError {
+            // Display Error Message (Only after login attempt)
+            if hasTriedLogin, let error = authenticationError {
                 Text(error)
                     .foregroundColor(.red)
                     .font(.subheadline)
@@ -37,7 +38,7 @@ struct SpotifyLoginView: View {
                     .accessibility(label: Text("Authentication Error: \(error)"))
             }
 
-            // Spotify Login Button (Shows only if token check is completed)
+            // Spotify Login Button (Only shows if token check is completed)
             if !isCheckingToken {
                 Button(action: authenticateWithSpotify) {
                     HStack {
@@ -82,6 +83,7 @@ struct SpotifyLoginView: View {
     private func authenticateWithSpotify() {
         isAuthenticating = true
         authenticationError = nil
+        hasTriedLogin = true // Mark that a login attempt has started
 
         print("⏳ Starting Spotify authentication...")
 
@@ -90,7 +92,7 @@ struct SpotifyLoginView: View {
                 isAuthenticating = false
                 if success {
                     print("✅ Authentication successful. Redirecting to app...")
-                    isLoggedIn = true
+                    checkLoginStatus()
                 } else {
                     print("❌ Authentication failed.")
                     authenticationError = "Authentication failed. Please try again."
@@ -103,30 +105,55 @@ struct SpotifyLoginView: View {
     private func checkIfAlreadyLoggedIn() {
         print("🔄 Checking if user is already logged in...")
 
+        // Check if access token exists & is still valid
+        if SpotifyAuthManager.shared.isTokenValid {
+            print("✅ User has a valid access token. Redirecting...")
+            isLoggedIn = true
+            return
+        }
+
+        print("⚠️ No valid access token found. Checking if refresh token exists...")
+
         SpotifyAuthManager.shared.refreshAccessToken { success in
             DispatchQueue.main.async {
                 isCheckingToken = false // Hide loading state
 
                 if success {
-                    print("✅ User already logged in. Redirecting...")
+                    print("✅ Access token refreshed successfully. Redirecting...")
                     isLoggedIn = true
                 } else {
                     print("⚠️ No valid token found. User must log in.")
+                    authenticationError = "Failed to retrieve token. Try logging in again."
                 }
             }
+        }
+    }
+
+    // MARK: - Ensure Token is Valid Before Proceeding
+    private func checkLoginStatus() {
+        if SpotifyAuthManager.shared.isTokenValid {
+            print("✅ Token is valid, logging in.")
+            isLoggedIn = true
+        } else {
+            print("❌ Token validation failed.")
+            authenticationError = "Failed to retrieve token. Try again."
         }
     }
 
     // MARK: - Listen for Authentication Success
     private func setupLoginListeners() {
         NotificationCenter.default.addObserver(forName: Notification.Name("SpotifyLoginSuccess"), object: nil, queue: .main) { _ in
-            print("🎵 Login Success Notification Received. Redirecting user...")
-            isLoggedIn = true
+            DispatchQueue.main.async {
+                print("🎵 Login Success Notification Received. Redirecting user...")
+                isLoggedIn = true
+            }
         }
 
         NotificationCenter.default.addObserver(forName: Notification.Name("SpotifyLoginFailure"), object: nil, queue: .main) { _ in
-            print("⚠️ Login Failure Notification Received.")
-            authenticationError = "Login failed. Please try again."
+            DispatchQueue.main.async {
+                print("⚠️ Login Failure Notification Received.")
+                authenticationError = "Login failed. Please try again."
+            }
         }
     }
 }

@@ -21,11 +21,23 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
         print("🔄 Received redirect URL: \(url.absoluteString)")
 
-        guard url.scheme == "moodifyapp" else {
-            print("❌ Error: Unrecognized URL scheme")
+        // Ensure the URL scheme is valid and contains the expected components
+        guard url.scheme == "moodifyapp", url.host != nil else {
+            print("❌ Error: Invalid or unrecognized URL scheme")
             return false
         }
 
+        // Debugging: Print query parameters from URL
+        if let components = URLComponents(url: url, resolvingAgainstBaseURL: false) {
+            print("🔍 URL Components: \(components)")
+            if let queryItems = components.queryItems {
+                for item in queryItems {
+                    print("🔹 \(item.name): \(item.value ?? "nil")")
+                }
+            }
+        }
+
+        // Handle the authentication redirect
         SpotifyAuthManager.shared.handleRedirect(url: url) { success in
             DispatchQueue.main.async {
                 if success {

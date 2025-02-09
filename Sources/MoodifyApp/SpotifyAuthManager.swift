@@ -4,6 +4,7 @@
 //
 //  Created by Michelle Rodriguez on 17/12/2024.
 //
+
 import Foundation
 import UIKit
 import CryptoKit
@@ -22,7 +23,10 @@ class SpotifyAuthManager {
     private let codeVerifierKey = "SpotifyCodeVerifier"
 
     var isTokenValid: Bool {
-        guard let expirationDate = UserDefaults.standard.object(forKey: tokenExpirationKey) as? Date else { return false }
+        guard let expirationDate = UserDefaults.standard.object(forKey: tokenExpirationKey) as? Date else {
+            print("⚠️ No expiration date found. Token is invalid.")
+            return false
+        }
         return expirationDate > Date()
     }
 
@@ -41,10 +45,9 @@ class SpotifyAuthManager {
             .replacingOccurrences(of: "/", with: "_")
     }
 
-    // MARK: - Authenticate User with PKCE
+    // MARK: - Authenticate User
     func authenticate(completion: @escaping (Bool) -> Void) {
         let scope = "user-read-private user-read-email playlist-modify-public playlist-modify-private"
-
         guard let encodedScope = scope.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
             print("❌ Error: Unable to encode scope.")
             completion(false)
@@ -71,16 +74,13 @@ class SpotifyAuthManager {
         }
     }
 
-    // MARK: - Handle Redirect URL (Fix for AppDelegate)
+    // MARK: - Handle Redirect URL
     func handleRedirect(url: URL, completion: @escaping (Bool) -> Void) {
-        guard let code = URLComponents(string: url.absoluteString)?
-                .queryItems?
-                .first(where: { $0.name == "code" })?.value else {
+        guard let code = URLComponents(string: url.absoluteString)?.queryItems?.first(where: { $0.name == "code" })?.value else {
             print("❌ Error: No authorization code found in redirect URL.")
             completion(false)
             return
         }
-
         print("✅ Authorization code received: \(code)")
         exchangeCodeForToken(code: code, completion: completion)
     }
@@ -109,21 +109,18 @@ class SpotifyAuthManager {
             guard let data = data,
                   let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
                   let accessToken = json["access_token"] as? String,
-                  let expiresIn = json["expires_in"] as? Int,
-                  let refreshToken = json["refresh_token"] as? String else {
+                  let expiresIn = json["expires_in"] as? Int else {
                 print("❌ Error: Failed to parse token response.")
                 completion(false)
                 return
             }
 
-            // Store tokens
+            let refreshToken = json["refresh_token"] as? String ?? UserDefaults.standard.string(forKey: self.refreshTokenKey)
             UserDefaults.standard.set(accessToken, forKey: self.accessTokenKey)
             UserDefaults.standard.set(refreshToken, forKey: self.refreshTokenKey)
             UserDefaults.standard.set(Date().addingTimeInterval(TimeInterval(expiresIn)), forKey: self.tokenExpirationKey)
-            print("✅ Access and refresh token received successfully.")
-            DispatchQueue.main.async {
-                NotificationCenter.default.post(name: Notification.Name("SpotifyLoginSuccess"), object: nil)
-            }
+
+            print("✅ Access token saved: \(accessToken.prefix(10))...")
             completion(true)
         }.resume()
     }
@@ -160,6 +157,7 @@ class SpotifyAuthManager {
 
             UserDefaults.standard.set(accessToken, forKey: self.accessTokenKey)
             UserDefaults.standard.set(Date().addingTimeInterval(TimeInterval(expiresIn)), forKey: self.tokenExpirationKey)
+
             print("✅ Access token refreshed successfully.")
             completion(true)
         }.resume()
