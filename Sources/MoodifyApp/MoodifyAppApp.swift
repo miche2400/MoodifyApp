@@ -4,85 +4,85 @@
 //
 //  Created by Michelle Rodriguez on 17/12/2024.
 //
-
 import SwiftUI
 
 @main
 struct MoodifyAppApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @AppStorage("UserLoggedIn") private var isLoggedIn: Bool = false // Persistent login state
+    @AppStorage("UserCompletedQuestionnaire") private var hasCompletedQuestionnaire: Bool = false // Track questionnaire completion
+    @State private var isCheckingSession: Bool = true // Prevents flickering before session validation
+    @State private var navigateToQuestionnaire: Bool = false // Handles navigation to questionnaire
 
     var body: some Scene {
         WindowGroup {
-            ZStack {
-                if isLoggedIn {
-                    ContentView()
-                        .transition(.opacity)
-                } else {
-                    SpotifyLoginView(isLoggedIn: $isLoggedIn)
-                        .transition(.opacity)
+            NavigationView {
+                ZStack {
+                    if isCheckingSession {
+                        ProgressView("Checking session...")
+                            .progressViewStyle(CircularProgressViewStyle(tint: .blue))
+                            .scaleEffect(1.5)
+                            .onAppear {
+                                validateSession()
+                            }
+                    } else if isLoggedIn {
+                        ContentView()
+                    } else {
+                        SpotifyLoginView(isLoggedIn: $isLoggedIn, navigateToQuestionnaire: $navigateToQuestionnaire)
+                    }
+                }
+                .onAppear {
+                    setupNotificationListeners()
                 }
             }
             .animation(.easeInOut(duration: 0.5), value: isLoggedIn)
-            .onAppear {
-                print("🔄 App started, checking login state: \(isLoggedIn)")
-                setupNotificationListeners()
-                validateUserSession()
-                debugStoredTokens() // Added to debug stored tokens
-            }
         }
     }
 
-    // MARK: - Validate User Session on App Launch
-    private func validateUserSession() {
-        if SpotifyAuthManager.shared.isTokenValid {
-            print("✅ User has a valid token. Skipping login.")
+    // MARK: - Validate Spotify Session
+    private func validateSession() {
+        print("🔍 Validating user session on app launch...")
+
+        if let accessToken = UserDefaults.standard.string(forKey: "SpotifyAccessToken"),
+           !accessToken.isEmpty,
+           SpotifyAuthManager.shared.isTokenValid { 
+            print("✅ Valid Spotify token found.")
             isLoggedIn = true
         } else {
-            print("⚠️ No valid token found. Attempting refresh...")
+            print("❌ No valid token found. Redirecting to login.")
+            isLoggedIn = false
+        }
 
-            SpotifyAuthManager.shared.refreshAccessToken { success in
-                DispatchQueue.main.async {
-                    if success {
-                        print("✅ Token refreshed, logging in.")
-                        isLoggedIn = true
-                    } else {
-                        print("❌ Token refresh failed. User must log in again.")
-                        isLoggedIn = false
-                        debugStoredTokens() // Added to check stored tokens when refresh fails
-                    }
-                }
-            }
+        // Ensure session check completes
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            isCheckingSession = false
         }
     }
 
     // MARK: - Notification Setup for Spotify Login
     private func setupNotificationListeners() {
-        NotificationCenter.default.addObserver(forName: Notification.Name("SpotifyLoginSuccess"), object: nil, queue: .main) { _ in
-            DispatchQueue.main.async {
-                print("✅ Spotify login detected! Updating state...")
-                isLoggedIn = true
-                debugStoredTokens() // Added to check tokens upon successful login
+        NotificationCenter.default.addObserver(
+            forName: Notification.Name("SpotifyLoginSuccess"),
+            object: nil,
+            queue: .main) { _ in
+                DispatchQueue.main.async {
+                    print("✅ Spotify login successful! Navigating to ContentView.")
+                    self.isLoggedIn = true
+                    self.navigateToQuestionnaire = true
+                    self.isCheckingSession = false // Ensure navigation updates correctly
+                }
             }
-        }
 
-        NotificationCenter.default.addObserver(forName: Notification.Name("SpotifyLoginFailure"), object: nil, queue: .main) { _ in
-            DispatchQueue.main.async {
-                print("❌ Spotify login failed. Staying on login screen.")
-                isLoggedIn = false
-                debugStoredTokens() // Added to check tokens upon failed login
+        NotificationCenter.default.addObserver(
+            forName: Notification.Name("SpotifyLoginFailure"),
+            object: nil,
+            queue: .main) { _ in
+                DispatchQueue.main.async {
+                    print("❌ Spotify login failed. User needs to log in again.")
+                    self.isLoggedIn = false
+                    self.navigateToQuestionnaire = false
+                    self.isCheckingSession = false // Ensure UI updates correctly
+                }
             }
-        }
-    }
-
-    // MARK: - Debugging Stored Tokens
-    private func debugStoredTokens() {
-        let storedAccessToken = UserDefaults.standard.string(forKey: "SpotifyAccessToken") ?? "None"
-        let storedRefreshToken = UserDefaults.standard.string(forKey: "SpotifyRefreshToken") ?? "None"
-        let tokenExpiration = UserDefaults.standard.object(forKey: "SpotifyTokenExpirationDate") as? Date ?? Date.distantPast
-
-        print("🔍 Stored Access Token: \(storedAccessToken.prefix(10))...")
-        print("🔍 Stored Refresh Token: \(storedRefreshToken.prefix(10))...")
-        print("🕒 Token Expiration Date: \(tokenExpiration)")
     }
 }
