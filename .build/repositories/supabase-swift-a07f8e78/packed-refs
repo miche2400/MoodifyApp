@@ -1,16 +1,10 @@
 # pack-refs with: peeled fully-peeled sorted 
-f98d7c46c329cd18865a2b3f149e4583362a012f refs/heads/auto-retry-requests
-a77bb1bc571cd75de89fe681ba57d64a543effdb refs/heads/big-refactor
-70e1928d3a0fe9a686e1c861cc8e2505b31fbab4 refs/heads/google-sign-in-test
-b35f5d2f686a7e7e3ac8cba010495bd10928b83e refs/heads/guilherme/adopt-swift-websocket
 2f8529709b6b42f2ee77095a1a85ac27cc8e71e2 refs/heads/guilherme/dont-send-non-jwts-in-authorization
 734e6df0aa895ecf36bd8a820fbbc84de816b759 refs/heads/macos-keychain-error
 bbff2689e9c5a8da878b303af6ea03d6c9748fec refs/heads/main
 b1b6b9d327a3aeddf94290c2f3e9c8284b38b751 refs/heads/postgrest-cache
-9b88a8688a06200afb94a6a51d1465973da821cf refs/heads/realtime-fixes
 f84ae8703f99548e66152ed4e7d93e8b37f9c633 refs/heads/resumable-upload
 272bac6a8cdd0df40ebd280d486fb4fbb89e2fce refs/heads/sample-supadrive
-fd89fb1922f822dd046d36e1e0fe821eebcc9488 refs/heads/sec-ch-ua-headers
 4a98ee28e3d239fa57261bfd72fda033cac03e4b refs/heads/typed-postgrest
 27ae8aa7fde9d240169a28e08bc2c4b6b8ca961a refs/pull/1/head
 402814ac6813d7e7f374288a921d78e29fbbc0b4 refs/pull/10/head
@@ -343,7 +337,6 @@ c571c4eb03816a46a37d307d37bb9591ee6de9fe refs/pull/553/head
 8e1244c4f68a60676ca02a3bef1000614a958e1e refs/pull/558/head
 b434e84abdbdc2b2cb44ec77b59983cdeb8e484a refs/pull/559/head
 f98d7c46c329cd18865a2b3f149e4583362a012f refs/pull/560/head
-8bb412e18076862f9a3afed21a7cf16a594c91fb refs/pull/560/merge
 2672ea15c5585d64cfcdd879f40b303604ceb368 refs/pull/561/head
 920d20fe630143d36eefa709b29a0c7076d79d54 refs/pull/562/head
 e951ad2d8e7d67a410b93868a5ae20e720280051 refs/pull/563/head
@@ -388,7 +381,6 @@ e894ab3d51a152569ed9018b978b8d26ce903865 refs/pull/609/head
 1e66c69ecb4b20b9b7fb02eac418de8986c961c0 refs/pull/610/head
 051d07e19d4870d76af546b3214119f8d1f7104f refs/pull/611/head
 264c70c6402919a508b1e59182c93613136950eb refs/pull/613/head
-fa6a05e2b1b2d96abe2aa42997c1fadd53f8ea3d refs/pull/613/merge
 8f49b60be9ba6cbd555c62b0b2e46bc0efa5f86d refs/pull/614/head
 da9c762b5624a6e7cdb335b2201d92b8d0ca559e refs/pull/615/head
 dc98763cdebff23abc08dd10db5d8509c32920b7 refs/pull/616/head
@@ -401,7 +393,6 @@ fcedc2dfeb9e60b8d2403f75ccf6232ac1a2ea9f refs/pull/621/head
 04fe3d862ffafdca92d17647a705bb77ea22e435 refs/pull/625/head
 b8b6fe7c00a6b0151bd8f1883abeaad2ab7df4a4 refs/pull/626/head
 9b88a8688a06200afb94a6a51d1465973da821cf refs/pull/627/head
-eb27d2953dd03aa971acef249979b996b4e34f8f refs/pull/627/merge
 39c856af2f6612da406de7d7a02b08d64a4721df refs/pull/63/head
 797778db362e002c49a380e1cd3291ace4eb0dec refs/pull/64/head
 7c9c602bdaf44e9e1b671cdb58fecda27bde1c30 refs/pull/65/head

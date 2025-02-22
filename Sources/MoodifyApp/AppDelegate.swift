@@ -4,58 +4,174 @@
 //
 //  Created by Michelle Rodriguez on 17/12/2024.
 //
-import UIKit
 
+import UIKit
+import SwiftUI
+
+@main
 class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
-    
+
+    // MARK: - App Storage Variables
+    @AppStorage("UserLoggedIn") private var isLoggedIn: Bool = false
+    @AppStorage("SpotifyAccessToken") private var accessToken: String?
+
+    // MARK: - State Variables
+    private var isCheckingSession = true
+
     override init() {
-           super.init()
-           print("🛠 [DEBUG] AppDelegate INIT called!")  
-       }
+        super.init()
+        print("🛠 [DEBUG] AppDelegate INIT called!")
+        setupNotificationListeners()
+    }
 
-    static let spotifyLoginSuccessNotification = Notification.Name("SpotifyLoginSuccess")
-    static let spotifyLoginFailureNotification = Notification.Name("SpotifyLoginFailure")
-
+    // MARK: - Application Launch
     func application(
-        _ app: UIApplication,
-        open url: URL,
-        options: [UIApplication.OpenURLOptionsKey: Any] = [:]
+        _ application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
-        print("🔄 [DEBUG] AppDelegate received URL: \(url.absoluteString)")
+        print("[DEBUG] AppDelegate didFinishLaunchingWithOptions called.")
 
-        // Ensure the URL scheme matches what is defined in Info.plist
-        guard let scheme = url.scheme, scheme.lowercased() == "moodifyapp" else {
-            print("❌ [ERROR] Invalid URL Scheme: \(url.scheme ?? "None")")
-            return false
-        }
-
-        // Validate URL host
-        guard let host = url.host, host == "callback" else {
-            print("⚠️ [WARNING] Unexpected URL host: \(url.host ?? "None")")
-            return false
-        }
-
-        // Send the URL to the SpotifyAuthManager
-        SpotifyAuthManager.shared.handleRedirect(url: url) { success in
-            DispatchQueue.main.async {
-                if success {
-                    print("✅ [DEBUG] Token exchange successful!")
-                    NotificationCenter.default.post(
-                        name: Notification.Name("SpotifyLoginSuccess"),
-                        object: nil
-                    )
-                } else {
-                    print("❌ [ERROR] Token exchange failed!")
-                    NotificationCenter.default.post(
-                        name: Notification.Name("SpotifyLoginFailure"),
-                        object: nil
-                    )
-                }
-            }
+        // Ensure window is properly initialized
+        self.window = UIWindow(frame: UIScreen.main.bounds)
+        
+        // Set an initial rootViewController
+        let initialView = UIHostingController(rootView: ProgressView("Loading..."))
+        self.window?.rootViewController = initialView
+        self.window?.makeKeyAndVisible()
+        
+        // Avoid async race conditions by updating root view after delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            self.updateRootView()
         }
 
         return true
     }
 
+    // MARK: - Update Root View
+    private func updateRootView() {
+        print("[DEBUG] Updating Root View...")
+        
+        let rootView = determineRootView()
+        let hostingController = UIHostingController(rootView: rootView)
+        
+        DispatchQueue.main.async {
+            self.window?.rootViewController = hostingController
+        }
+    }
+
+    // MARK: - Determine Root View
+    private func determineRootView() -> some View {
+        if isCheckingSession {
+            return AnyView(
+                ProgressView("Checking session...")
+                    .progressViewStyle(CircularProgressViewStyle(tint: .blue))
+                    .scaleEffect(1.5)
+                    .onAppear {
+                        self.checkLoginStatus()
+                    }
+            )
+        } else if isLoggedIn {
+            print("[DEBUG] Showing ContentView.")
+            return AnyView(ContentView())
+        } else {
+            print("[DEBUG] Showing Spotify Login View.")
+            return AnyView(SpotifyLoginView(isLoggedIn: .constant(false), navigateToQuestionnaire: .constant(false)))
+        }
+    }
+
+    // MARK: - Check Login Status
+    private func checkLoginStatus() {
+        print("Checking if user is logged in...")
+
+        if isLoggedIn {
+            print("User is logged in. Checking token validity...")
+
+            if let accessToken = SpotifyAuthManager.shared.getAccessToken(), !accessToken.isEmpty {
+                print("Valid Spotify token found.")
+                DispatchQueue.main.async {
+                    self.isCheckingSession = false
+                    self.updateRootView()
+                }
+            } else {
+                print("Token is invalid or expired. Logging out user.")
+                logoutUser()
+            }
+        } else {
+            print("No valid session found. Showing login screen...")
+            DispatchQueue.main.async {
+                self.isCheckingSession = false
+                self.updateRootView()
+            }
+        }
+    }
+
+    // MARK: - Logout User (If Token is Expired)
+    private func logoutUser() {
+        print("Logging out user and showing login screen.")
+        DispatchQueue.main.async {
+            self.isLoggedIn = false
+            self.accessToken = nil
+            self.updateRootView()
+        }
+    }
+
+    // MARK: - Handle Spotify Redirect
+    func application(
+        _ app: UIApplication,
+        open url: URL,
+        options: [UIApplication.OpenURLOptionsKey: Any] = [:]
+    ) -> Bool {
+        print("[DEBUG] AppDelegate received URL: \(url.absoluteString)")
+
+        guard let scheme = url.scheme, scheme.lowercased() == "moodifyapp",
+              let host = url.host, host == "callback" else {
+            print("[ERROR] Invalid URL Scheme or Host in AppDelegate")
+            return false
+        }
+
+        SpotifyAuthManager.shared.handleRedirect(url: url) { success in
+            DispatchQueue.main.async {
+                if success {
+                    print("[DEBUG] Token exchange successful in AppDelegate")
+                    self.isLoggedIn = true
+                    self.updateRootView()
+                    NotificationCenter.default.post(name: Notification.Name("SpotifyLoginSuccess"), object: nil)
+                } else {
+                    print(" [ERROR] Token exchange failed in AppDelegate")
+                    self.isLoggedIn = false
+                    self.updateRootView()
+                    NotificationCenter.default.post(name: Notification.Name("SpotifyLoginFailure"), object: nil)
+                }
+            }
+        }
+        return true
+    }
+
+    // MARK: - Setup Notification Observers
+    private func setupNotificationListeners() {
+        NotificationCenter.default.addObserver(
+            forName: Notification.Name("SpotifyLoginSuccess"),
+            object: nil,
+            queue: .main
+        ) { _ in
+            DispatchQueue.main.async {
+                print(" Spotify login successful! Navigating to ContentView.")
+                self.isLoggedIn = true
+                self.updateRootView()
+            }
+        }
+
+        NotificationCenter.default.addObserver(
+            forName: Notification.Name("SpotifyLoginFailure"),
+            object: nil,
+            queue: .main
+        ) { _ in
+            DispatchQueue.main.async {
+                print("Spotify login failed. User needs to log in again.")
+                self.isLoggedIn = false
+                self.updateRootView()
+            }
+        }
+    }
 }

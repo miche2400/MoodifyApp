@@ -8,19 +8,27 @@
 import SwiftUI
 import Foundation
 import Supabase
+import PlaylistRecommendationView
+
 
 struct ContentView: View {
+    // MARK: - App Storage
     @AppStorage("UserLoggedIn") private var isLoggedIn: Bool = false
     @AppStorage("UserCompletedQuestionnaire") private var hasCompletedQuestionnaire: Bool = false
     @AppStorage("SpotifyAccessToken") private var accessToken: String?
 
+    // MARK: - State Variables
     @State private var responses: [String: String] = [:]
     @State private var isLoading: Bool = false
     @State private var showError: Bool = false
+    @State private var errorMessage: String?
     @State private var isSubmitted: Bool = false
     @State private var isCheckingToken: Bool = true
     @State private var navigateToQuestionnaire: Bool = false
+    @State private var navigateToPlaylist = false
 
+
+    // MARK: - Questionnaire Data
     private let likertQuestions = [
         "I feel content and satisfied with my current situation.",
         "I am feeling a bit stressed or overwhelmed.",
@@ -36,72 +44,92 @@ struct ContentView: View {
         "Agree",
         "Strongly Agree"
     ]
-    
+
+    // MARK: - Progress Calculation
+    private var progress: Double {
+        Double(responses.count) / Double(likertQuestions.count)
+    }
+
+    // MARK: - Body
     var body: some View {
         NavigationStack {
-                    ZStack {
-                        Color(.systemBackground).ignoresSafeArea()
-
-                        if isCheckingToken {
-                            ProgressView("Checking login status...")
-                                .progressViewStyle(CircularProgressViewStyle(tint: .blue))
-                                .scaleEffect(1.5)
-                                .onAppear {
-                                    validateUserSession()
-                                }
-                        } else if !isLoggedIn {
-                            SpotifyLoginView(isLoggedIn: $isLoggedIn, navigateToQuestionnaire: $navigateToQuestionnaire)
-                        } else {
-                            if hasCompletedQuestionnaire {
-                                thankYouView
-                            } else {
-                                questionnaireView
-                            }
+            ZStack {
+                Color(.systemBackground).ignoresSafeArea()
+                
+                if isCheckingToken {
+                    ProgressView("Checking login status...")
+                        .progressViewStyle(CircularProgressViewStyle(tint: .blue))
+                        .scaleEffect(1.5)
+                        .onAppear {
+                            validateUserSession()
                         }
-                    }
-                    .navigationBarHidden(true)
-                    .navigationDestination(isPresented: $navigateToQuestionnaire) {
+                } else if !isLoggedIn {
+                    SpotifyLoginView(
+                        isLoggedIn: $isLoggedIn,
+                        navigateToQuestionnaire: $navigateToQuestionnaire
+                    )
+                } else {
+                    if hasCompletedQuestionnaire {
+                        thankYouView
+                    } else {
                         questionnaireView
                     }
                 }
-      }
+            }
+            .navigationBarHidden(true)
+            .navigationDestination(isPresented: $navigateToQuestionnaire) {
+                questionnaireView
+            }
+            .navigationDestination(isPresented: $navigateToPlaylist) {
+                        PlaylistRecommendationView()
+                    }
+            .alert(isPresented: $showError) {
+                Alert(
+                    title: Text("Error"),
+                    message: Text(errorMessage ?? "Something went wrong."),
+                    dismissButton: .default(Text("OK"))
+                )
+            }
+        }
+        .onChange(of: isLoggedIn) {
+            if isLoggedIn {
+                print("[DEBUG] User is logged in. Navigating to questionnaire.")
+                navigateToQuestionnaire = true
+            }
+        }
+    }
 
-    // MARK: - Validate Spotify Session Before Loading UI
+    // MARK: - Validate Spotify Session
     private func validateUserSession() {
-        print("🔍 Checking user session...")
+        print("Checking user session...")
 
-        if let savedToken = UserDefaults.standard.string(forKey: "SpotifyAccessToken"),
-           !savedToken.isEmpty,
-           SpotifyAuthManager.shared.isTokenValid {
-
-            print("✅ User has a valid Spotify token.")
+        if let token = SpotifyAuthManager.shared.getAccessToken(), !token.isEmpty {
+            print("User is already logged in. Valid token found.")
             isLoggedIn = true
-            navigateToQuestionnaire = true
             isCheckingToken = false
+            navigateToQuestionnaire = true
         } else {
-            print("⚠️ Token expired or missing. Attempting refresh...")
-
+            print("No valid token found. Trying to refresh...")
             SpotifyAuthManager.shared.refreshAccessToken { success in
                 DispatchQueue.main.async {
-                    if success, let refreshedToken = UserDefaults.standard.string(forKey: "SpotifyAccessToken"), !refreshedToken.isEmpty {
-                        print("✅ Token successfully refreshed.")
-                        isLoggedIn = true
-                        navigateToQuestionnaire = true
+                    if success {
+                        print("Token refreshed successfully!")
+                        self.isLoggedIn = true
+                        self.navigateToQuestionnaire = true
                     } else {
-                        print("❌ Failed to refresh token. Redirecting to login.")
-                        isLoggedIn = false
+                        print("Token refresh failed. Showing login screen.")
+                        self.isLoggedIn = false
                     }
-                    isCheckingToken = false
+                    self.isCheckingToken = false
                 }
             }
         }
     }
 
-
-    // MARK: - Thank You View After Submission
+    // MARK: - Thank You View
     var thankYouView: some View {
         VStack {
-            Text("✅ Thank you for submitting!")
+            Text("Thank you for submitting!")
                 .font(.title)
                 .padding()
             Text("We are personalizing your experience.")
@@ -114,7 +142,7 @@ struct ContentView: View {
         .transition(.opacity)
     }
 
-    // MARK: - Questionnaire View
+    // MARK: - Modern Questionnaire View
     var questionnaireView: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 25) {
@@ -129,7 +157,7 @@ struct ContentView: View {
                     .padding(.horizontal, 20)
 
                 ForEach(likertQuestions, id: \.self) { question in
-                    questionView(question)
+                    questionCardView(question)
                 }
 
                 submitButton
@@ -138,27 +166,34 @@ struct ContentView: View {
         }
     }
 
-    // MARK: - Individual Question View
-    func questionView(_ question: String) -> some View {
+    // MARK: - Question Card View (Modern Design)
+    func questionCardView(_ question: String) -> some View {
         VStack(alignment: .leading, spacing: 15) {
             Text(question)
                 .font(.headline)
+                .foregroundColor(.primary)
                 .padding(.horizontal, 20)
+                .padding(.top, 15)
 
             VStack(alignment: .leading, spacing: 10) {
                 ForEach(answerOptions, id: \.self) { option in
-                    answerButton(question: question, option: option)
+                    answerSelectionButton(question: question, option: option)
                 }
             }
             .padding(.horizontal, 20)
+            .padding(.bottom, 15)
         }
+        .background(Color(.secondarySystemBackground))
+        .cornerRadius(12)
+        .shadow(radius: 2)
+        .padding(.horizontal, 15)
+        .animation(.easeInOut, value: responses)
     }
 
-    // MARK: - Answer Button
-    func answerButton(question: String, option: String) -> some View {
+    // MARK: - Answer Selection Button
+    func answerSelectionButton(question: String, option: String) -> some View {
         Button(action: {
             responses[question] = option
-            checkAndHideError()
         }) {
             HStack {
                 Circle()
@@ -169,14 +204,17 @@ struct ContentView: View {
                     .foregroundColor(.primary)
             }
             .padding()
-            .background(responses[question] == option ? Color.blue.opacity(0.2) : Color(.systemGray6))
+            .background(
+                responses[question] == option ? Color.blue.opacity(0.2) : Color.clear
+            )
             .cornerRadius(10)
         }
+        .buttonStyle(PlainButtonStyle())
     }
 
     // MARK: - Submit Button
     var submitButton: some View {
-        Button(action: submitResponses) {
+        Button(action: mainSubmitFlow) {
             HStack {
                 if isLoading {
                     ProgressView()
@@ -199,53 +237,24 @@ struct ContentView: View {
         .padding(.top, 10)
         .disabled(isLoading || isSubmitted || !validateResponses())
     }
-
-    // MARK: - Error View
-    var errorView: some View {
-        VStack {
-            Text("⚠️ Please answer all questions.")
-                .foregroundColor(.white)
-                .padding()
-                .background(Color.red)
-                .cornerRadius(10)
-                .padding(.horizontal, 20)
-            Spacer()
-        }
-        .transition(.opacity)
-        .animation(.easeInOut, value: showError)
-    }
-
-    // MARK: - Progress Calculation
-    private var progress: Double {
-        return Double(responses.count) / Double(likertQuestions.count)
-    }
-
-    // MARK: - Form Validation
+    
+    // MARK: - Validate Responses
     private func validateResponses() -> Bool {
-        return likertQuestions.allSatisfy { responses[$0] != nil }
+        return likertQuestions.allSatisfy { responses[$0] != nil && !responses[$0]!.isEmpty }
     }
-
-    // MARK: - Error Handling
-    private func checkAndHideError() {
-        if validateResponses() {
-            withAnimation(.easeInOut) {
-                showError = false
-            }
-        }
-    }
-
     // MARK: - Submit Responses to Supabase
-    private func submitResponses() {
-        if !validateResponses() {
+    private func mainSubmitFlow() {
+        guard validateResponses() else {  
             showError = true
+            errorMessage = "Please answer all questions before submitting."
             return
         }
 
         isLoading = true
 
         let responseObjects: [Response] = likertQuestions.compactMap { question in
-            if let response = responses[question], !response.isEmpty {
-                return Response(question: question, answer: response)
+            if let answer = responses[question], !answer.isEmpty {
+                return Response(question: question, answer: answer)
             }
             return nil
         }
@@ -254,10 +263,12 @@ struct ContentView: View {
             DispatchQueue.main.async {
                 isLoading = false
                 if success {
-                    isSubmitted = true
-                    hasCompletedQuestionnaire = true
+                    self.isSubmitted = true
+                    self.hasCompletedQuestionnaire = true
+                    self.navigateToPlaylist = true
                 } else {
-                    showError = true
+                    self.showError = true
+                    self.errorMessage = "Failed to submit responses to Supabase."
                 }
             }
         }
