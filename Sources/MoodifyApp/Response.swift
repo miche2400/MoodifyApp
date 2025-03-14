@@ -7,7 +7,12 @@
 
 import Foundation
 
-struct Response: Codable {
+struct Response: Codable, Equatable {
     let question: String
     let answer: String
+
+    static func == (lhs: Response, rhs: Response) -> Bool {
+        return lhs.question == rhs.question && lhs.answer == rhs.answer
+    }
 }
+

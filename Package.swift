@@ -14,13 +14,15 @@ let package = Package(
         )
     ],
     dependencies: [
-        .package(url: "https://github.com/supabase/supabase-swift.git", from: "2.0.0") 
+        .package(url: "https://github.com/supabase/supabase-swift.git", from: "2.0.0"),
+        .package(url: "https://github.com/MacPaw/OpenAI.git", branch: "main")
     ],
     targets: [
         .target(
             name: "MoodifyApp",
             dependencies: [
-                .product(name: "Supabase", package: "supabase-swift")
+                .product(name: "Supabase", package: "supabase-swift"),
+                .product(name: "OpenAI", package: "OpenAI")
             ],
             path: "Sources/MoodifyApp",
             resources: [

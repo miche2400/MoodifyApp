@@ -8,8 +8,6 @@
 import SwiftUI
 import Foundation
 import Supabase
-import PlaylistRecommendationView
-
 
 struct ContentView: View {
     // MARK: - App Storage
@@ -26,7 +24,6 @@ struct ContentView: View {
     @State private var isCheckingToken: Bool = true
     @State private var navigateToQuestionnaire: Bool = false
     @State private var navigateToPlaylist = false
-
 
     // MARK: - Questionnaire Data
     private let likertQuestions = [
@@ -81,8 +78,8 @@ struct ContentView: View {
                 questionnaireView
             }
             .navigationDestination(isPresented: $navigateToPlaylist) {
-                        PlaylistRecommendationView()
-                    }
+                PlaylistRecommendationView(userResponses: responses.map { Response(question: $0.key, answer: $0.value) })
+            }
             .alert(isPresented: $showError) {
                 Alert(
                     title: Text("Error"),
@@ -166,7 +163,7 @@ struct ContentView: View {
         }
     }
 
-    // MARK: - Question Card View (Modern Design)
+    // MARK: - Question Card View
     func questionCardView(_ question: String) -> some View {
         VStack(alignment: .leading, spacing: 15) {
             Text(question)
@@ -237,14 +234,13 @@ struct ContentView: View {
         .padding(.top, 10)
         .disabled(isLoading || isSubmitted || !validateResponses())
     }
-    
     // MARK: - Validate Responses
     private func validateResponses() -> Bool {
         return likertQuestions.allSatisfy { responses[$0] != nil && !responses[$0]!.isEmpty }
     }
     // MARK: - Submit Responses to Supabase
     private func mainSubmitFlow() {
-        guard validateResponses() else {  
+        guard validateResponses() else {
             showError = true
             errorMessage = "Please answer all questions before submitting."
             return
@@ -252,14 +248,7 @@ struct ContentView: View {
 
         isLoading = true
 
-        let responseObjects: [Response] = likertQuestions.compactMap { question in
-            if let answer = responses[question], !answer.isEmpty {
-                return Response(question: question, answer: answer)
-            }
-            return nil
-        }
-
-        SupabaseService.shared.submitResponses(responses: responseObjects) { success in
+        SupabaseService.shared.submitResponses(responses: responses.map { Response(question: $0.key, answer: $0.value) }) { success in
             DispatchQueue.main.async {
                 isLoading = false
                 if success {

@@ -239,6 +239,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				D6732BE42D628A29002A4F2F /* XCRemoteSwiftPackageReference "supabase-swift" */,
+				D6732C6B2D6A56CE002A4F2F /* XCRemoteSwiftPackageReference "OpenAI" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D69712702D11C6A0006C23D4 /* Products */;
@@ -477,6 +478,7 @@
 				DEVELOPMENT_TEAM = 9TSD5R262H;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Sources/MoodifyApp/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -614,6 +616,14 @@
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 2.5.1;
+			};
+		};
+		D6732C6B2D6A56CE002A4F2F /* XCRemoteSwiftPackageReference "OpenAI" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/MacPaw/OpenAI";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.3.4;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */

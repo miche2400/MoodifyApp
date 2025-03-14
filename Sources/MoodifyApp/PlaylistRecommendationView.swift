@@ -4,16 +4,19 @@
 //
 //  Created by Michelle Rodriguez on 20/02/2025.
 //
-
+ 
 import SwiftUI
-import OpenAI
 import Supabase
 
 struct PlaylistRecommendationView: View {
-    let userResponses: [Response]
+    
+    
+    @State var userResponses: [Response]
     @State private var recommendedPlaylist: [String] = []
     @State private var isLoading: Bool = true
     @State private var errorMessage: String?
+    @State private var lastAPICallTime: Date = Date.distantPast
+
 
     var body: some View {
         VStack {
@@ -32,7 +35,7 @@ struct PlaylistRecommendationView: View {
                     .foregroundColor(.red)
                     .padding()
             } else {
-                List(recommendedPlaylist, id: \ .self) { song in
+                List(recommendedPlaylist, id: \.self) { song in
                     Text(song)
                 }
             }
@@ -43,43 +46,88 @@ struct PlaylistRecommendationView: View {
             .padding()
         }
         .onAppear {
-            fetchPlaylistRecommendation()
+            fetchLatestResponses()
         }
     }
     
-    private func fetchPlaylistRecommendation() {
+    // MARK: - Fetch Latest User Responses from Supabase
+    private func fetchLatestResponses() {
         isLoading = true
         errorMessage = nil
-        
-        let userMood = analyzeMood(from: userResponses)
-        let prompt = "Based on the user's mood: \(userMood), recommend a playlist with 5 songs."
-        
-        OpenAIService.shared.getAIRecommendation(for: prompt) { result in
+
+        SupabaseService.shared.fetchLatestResponses { responses in
             DispatchQueue.main.async {
-                isLoading = false
-                switch result {
-                case .success(let songs):
-                    self.recommendedPlaylist = songs
-                case .failure(let error):
-                    self.errorMessage = "Failed to get playlist: \(error.localizedDescription)"
+                if responses.isEmpty {
+                    self.errorMessage = "No responses found. Please complete the questionnaire."
+                    self.isLoading = false
+                } else {
+                    if responses == self.userResponses {
+                        print("[DEBUG] Using cached responses. Skipping OpenAI API call.")
+                        self.isLoading = false
+                        return
+                    }
+                    
+                    self.userResponses = responses
+                    self.fetchPlaylistRecommendation()
                 }
             }
         }
     }
-    
-    private func analyzeMood(from responses: [Response]) -> String {
-        let positiveResponses = ["Agree", "Strongly Agree"]
-        let negativeResponses = ["Disagree", "Strongly Disagree"]
+
+
+    // MARK: - Fetch Playlist Recommendation from OpenAI
+    func fetchPlaylistRecommendation(retryCount: Int = 0) {
+        let minInterval: TimeInterval = 120 // 2 minutes delay before API call
         
-        let positiveCount = responses.filter { positiveResponses.contains($0.answer) }.count
-        let negativeCount = responses.filter { negativeResponses.contains($0.answer) }.count
-        
-        if positiveCount > negativeCount {
-            return "Happy and Energetic"
-        } else if negativeCount > positiveCount {
-            return "Calm and Relaxing"
-        } else {
-            return "Neutral"
+        if Date().timeIntervalSince(lastAPICallTime) < minInterval {
+            print("[DEBUG] Skipping API call: Too soon after last request.")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+                self.fetchPlaylistRecommendation(retryCount: retryCount + 1)
+            }
+            return
+        }
+
+        lastAPICallTime = Date() // Update timestamp to prevent spam
+
+        guard !userResponses.isEmpty else {
+            DispatchQueue.main.async {
+                self.errorMessage = "No user responses available."
+            }
+            return
+        }
+
+        isLoading = true
+
+        OpenAIService.shared.generatePlaylist(from: userResponses) { result in
+            DispatchQueue.main.async {
+                self.isLoading = false
+                
+                switch result {
+                case .success(let playlist):
+                    let parsedPlaylist = playlist
+                        .components(separatedBy: ",")
+                        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                    
+                    if parsedPlaylist.isEmpty {
+                        print("[ERROR] OpenAI response did not contain valid song data.")
+                        self.errorMessage = "OpenAI returned an invalid playlist. Please try again."
+                    } else {
+                        self.recommendedPlaylist = parsedPlaylist
+                    }
+
+                case .failure(let error):
+                    print("[ERROR] OpenAI API request failed: \(error.localizedDescription)")
+
+                    if case .rateLimited = error {
+                        print("[DEBUG] Rate limited. Showing error.")
+                        self.errorMessage = "Too many requests. Please wait and try again later."
+                    } else {
+                        self.errorMessage = "Failed to get playlist: \(error.localizedDescription)"
+                    }
+                }
+            }
         }
     }
+
+
 }
