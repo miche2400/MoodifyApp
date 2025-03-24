@@ -24,7 +24,7 @@ struct ContentView: View {
     @State private var isCheckingToken: Bool = true
     @State private var navigateToQuestionnaire: Bool = false
     @State private var navigateToPlaylist = false
-    @State private var playlistID: String?
+    @State private var playlistID: String?  // This is the final playlist ID from OpenAI
 
     // MARK: - Questionnaire Data
     private let likertQuestions = [
@@ -76,12 +76,15 @@ struct ContentView: View {
                 }
             }
             .navigationBarHidden(true)
+            // If the user wants to go to the questionnaire
             .navigationDestination(isPresented: $navigateToQuestionnaire) {
                 questionnaireView
             }
+            // Once we have a playlistID, we show PlaylistRecommendationView
             .navigationDestination(isPresented: $navigateToPlaylist) {
                 if let playlistID = playlistID {
-                    SpotifyEmbedView(playlistID: playlistID)
+                    // This is the new final screen that shows the embed
+                    PlaylistRecommendationView(playlistID: playlistID)
                 } else {
                     Text("Failed to load playlist.")
                 }
@@ -96,8 +99,10 @@ struct ContentView: View {
             .onAppear {
                 print("[DEBUG] ContentView appeared. Checking user session...")
 
-                // FOR TESTING ONLY: Always reset so we see the questionnaire each time
+                // Always reset the questionnaire
                 hasCompletedQuestionnaire = false
+                self.isSubmitted = false
+                self.responses.removeAll()
 
                 validateUserSession()
             }
@@ -291,37 +296,8 @@ struct ContentView: View {
                             case .success(let generatedPlaylistID):
                                 print("[DEBUG] Playlist generated successfully: \(generatedPlaylistID)")
                                 self.playlistID = generatedPlaylistID  // Store playlist ID
-                                
-                                // Fetch the Spotify user ID and store the playlist in Supabase
-                                Task {
-                                    guard let token = UserDefaults.standard.string(forKey: "SpotifyAccessToken"),
-                                          !token.isEmpty,
-                                          let spotifyUserID = await fetchSpotifyUserID(accessToken: token)
-                                    else {
-                                        print("[ERROR] Unable to fetch Spotify user ID.")
-                                        DispatchQueue.main.async {
-                                            self.showError = true
-                                            self.errorMessage = "Failed to fetch Spotify user ID."
-                                        }
-                                        return
-                                    }
-                                    SupabaseService.shared.storeMoodSelection(
-                                        spotifyUserID: spotifyUserID,
-                                        mood: "Energetic & Stressed",
-                                        playlistID: generatedPlaylistID
-                                    ) { storeResult in
-                                        DispatchQueue.main.async {
-                                            switch storeResult {
-                                            case .success:
-                                                self.navigateToPlaylist = true // Navigate to Spotify Playlist View
-                                            case .failure(let error):
-                                                print("[ERROR] Failed to store mood selection: \(error.localizedDescription)")
-                                                self.showError = true
-                                                self.errorMessage = "Failed to save playlist data. Try again."
-                                            }
-                                        }
-                                    }
-                                }
+                                // Navigate to the new recommendation view
+                                self.navigateToPlaylist = true
 
                             case .failure(let error):
                                 print("[ERROR] Failed to generate playlist: \(error.localizedDescription)")

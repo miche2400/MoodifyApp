@@ -7,5 +7,5 @@ Info.plist
 .DS_Store
 DerivedData/
 
-
-
+# Ignore Swift Package Manager build artifacts
+.build/

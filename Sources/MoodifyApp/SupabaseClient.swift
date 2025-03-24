@@ -142,7 +142,7 @@ class SupabaseService {
     
     
     // MARK: - Fetch User Playlists
-    func fetchUserPlaylists(completion: @escaping ([Playlist]) -> Void) {
+    func fetchUserPlaylists(completion: @escaping ([moodSelections]) -> Void) {
         Task {
             // We now fetch playlists based on Spotify user ID.
             guard let token = UserDefaults.standard.string(forKey: "SpotifyAccessToken"),
@@ -165,7 +165,7 @@ class SupabaseService {
                 let rawResponse = String(data: response.data, encoding: .utf8) ?? "No data"
                 print("[DEBUG] Raw Supabase Response: \(rawResponse)")
 
-                let playlists = try JSONDecoder().decode([Playlist].self, from: response.data)
+                let playlists = try JSONDecoder().decode([moodSelections].self, from: response.data)
                 DispatchQueue.main.async {
                     completion(playlists)
                 }
@@ -274,6 +274,24 @@ class SupabaseService {
             }
         }
     }
+    // MARK: - Fetch Mood Selections from "moodSelections"
+        func fetchMoodSelections(completion: @escaping ([moodSelections]) -> Void) {
+            Task {
+                do {
+                    let response = try await client
+                        .from("moodSelections")
+                        .select()
+                        .execute()
+
+                    let items = try JSONDecoder().decode([moodSelections].self, from: response.data)
+                    print("[DEBUG] Fetched moodSelections successfully: \(items)")
+                    completion(items)
+                } catch {
+                    print("[ERROR] Error fetching moodSelections: \(error.localizedDescription)")
+                    completion([])
+                }
+            }
+        }
 }
 
 // MARK: - Spotify API Helper

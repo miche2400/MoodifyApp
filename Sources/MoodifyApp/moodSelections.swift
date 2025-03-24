@@ -7,14 +7,14 @@
 
 import Foundation
 
-struct MoodSelection: Codable, Equatable {
+struct moodSelections: Codable, Equatable {
     let id: Int?
     let created_at: String?
     let user_id: String  // Updated from UUID to String
     let mood: String
     let playlist_id: String
 
-    static func == (lhs: MoodSelection, rhs: MoodSelection) -> Bool {
+    static func == (lhs: moodSelections, rhs: moodSelections) -> Bool {
         return lhs.id == rhs.id &&
                lhs.user_id == rhs.user_id &&
                lhs.mood == rhs.mood &&
