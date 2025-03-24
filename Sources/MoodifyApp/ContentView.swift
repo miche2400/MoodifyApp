@@ -24,6 +24,7 @@ struct ContentView: View {
     @State private var isCheckingToken: Bool = true
     @State private var navigateToQuestionnaire: Bool = false
     @State private var navigateToPlaylist = false
+    @State private var playlistID: String?
 
     // MARK: - Questionnaire Data
     private let likertQuestions = [
@@ -52,24 +53,25 @@ struct ContentView: View {
         NavigationStack {
             ZStack {
                 Color(.systemBackground).ignoresSafeArea()
-                
+
                 if isCheckingToken {
-                    ProgressView("Checking login status...")
+                    ProgressView("Checking session...")
                         .progressViewStyle(CircularProgressViewStyle(tint: .blue))
                         .scaleEffect(1.5)
-                        .onAppear {
-                            validateUserSession()
-                        }
-                } else if !isLoggedIn {
-                    SpotifyLoginView(
-                        isLoggedIn: $isLoggedIn,
-                        navigateToQuestionnaire: $navigateToQuestionnaire
-                    )
                 } else {
-                    if hasCompletedQuestionnaire {
-                        thankYouView
+                    if isLoggedIn {
+                        // If user is logged in, check if they've completed the questionnaire
+                        if hasCompletedQuestionnaire {
+                            thankYouView
+                        } else {
+                            questionnaireView
+                        }
                     } else {
-                        questionnaireView
+                        // Otherwise, show Spotify login screen
+                        SpotifyLoginView(
+                            isLoggedIn: $isLoggedIn,
+                            navigateToQuestionnaire: $navigateToQuestionnaire
+                        )
                     }
                 }
             }
@@ -78,7 +80,11 @@ struct ContentView: View {
                 questionnaireView
             }
             .navigationDestination(isPresented: $navigateToPlaylist) {
-                PlaylistRecommendationView(userResponses: responses.map { Response(question: $0.key, answer: $0.value) })
+                if let playlistID = playlistID {
+                    SpotifyEmbedView(playlistID: playlistID)
+                } else {
+                    Text("Failed to load playlist.")
+                }
             }
             .alert(isPresented: $showError) {
                 Alert(
@@ -87,38 +93,57 @@ struct ContentView: View {
                     dismissButton: .default(Text("OK"))
                 )
             }
+            .onAppear {
+                print("[DEBUG] ContentView appeared. Checking user session...")
+
+                // FOR TESTING ONLY: Always reset so we see the questionnaire each time
+                hasCompletedQuestionnaire = false
+
+                validateUserSession()
+            }
         }
-        .onChange(of: isLoggedIn) {
-            if isLoggedIn {
-                print("[DEBUG] User is logged in. Navigating to questionnaire.")
-                navigateToQuestionnaire = true
+        .onChange(of: isLoggedIn, initial: false) { oldValue, newValue in
+            if !oldValue && newValue {
+                print("[DEBUG] User logged in. Navigating to questionnaire.")
+                DispatchQueue.main.async {
+                    self.navigateToQuestionnaire = true
+                }
             }
         }
     }
 
     // MARK: - Validate Spotify Session
     private func validateUserSession() {
-        print("Checking user session...")
+        print("[DEBUG] Starting session validation...")
 
+        // If user has a valid Spotify token
         if let token = SpotifyAuthManager.shared.getAccessToken(), !token.isEmpty {
-            print("User is already logged in. Valid token found.")
-            isLoggedIn = true
-            isCheckingToken = false
-            navigateToQuestionnaire = true
-        } else {
-            print("No valid token found. Trying to refresh...")
-            SpotifyAuthManager.shared.refreshAccessToken { success in
-                DispatchQueue.main.async {
-                    if success {
-                        print("Token refreshed successfully!")
+            print("[DEBUG] Found existing Spotify token.")
+
+            Task {
+                print("[DEBUG] No active Supabase session. Attempting Supabase login...")
+                
+                let success = await SupabaseService.shared.loginWithSpotify(token: token)
+                
+                if success {
+                    print("[DEBUG] Custom SSO login successful!")
+                    DispatchQueue.main.async {
                         self.isLoggedIn = true
-                        self.navigateToQuestionnaire = true
-                    } else {
-                        print("Token refresh failed. Showing login screen.")
-                        self.isLoggedIn = false
+                        self.isCheckingToken = false
                     }
-                    self.isCheckingToken = false
+                } else {
+                    print("[ERROR] Supabase login failed (custom approach).")
+                    DispatchQueue.main.async {
+                        self.isLoggedIn = false
+                        self.isCheckingToken = false
+                    }
                 }
+            }
+
+        } else {
+            print("[DEBUG] No valid Spotify token found. Showing login screen.")
+            DispatchQueue.main.async {
+                self.isCheckingToken = false
             }
         }
     }
@@ -234,11 +259,11 @@ struct ContentView: View {
         .padding(.top, 10)
         .disabled(isLoading || isSubmitted || !validateResponses())
     }
-    // MARK: - Validate Responses
+
     private func validateResponses() -> Bool {
-        return likertQuestions.allSatisfy { responses[$0] != nil && !responses[$0]!.isEmpty }
+        likertQuestions.allSatisfy { responses[$0] != nil && !responses[$0]!.isEmpty }
     }
-    // MARK: - Submit Responses to Supabase
+
     private func mainSubmitFlow() {
         guard validateResponses() else {
             showError = true
@@ -247,14 +272,64 @@ struct ContentView: View {
         }
 
         isLoading = true
+        let formattedResponses = responses.map { Response(question: $0.key, answer: $0.value) }
 
-        SupabaseService.shared.submitResponses(responses: responses.map { Response(question: $0.key, answer: $0.value) }) { success in
+        print("[DEBUG] Submitting responses to Supabase...")
+
+        SupabaseService.shared.submitResponses(responses: formattedResponses) { success in
             DispatchQueue.main.async {
-                isLoading = false
+                self.isLoading = false
                 if success {
+                    print("[DEBUG] Responses stored successfully.")
                     self.isSubmitted = true
                     self.hasCompletedQuestionnaire = true
-                    self.navigateToPlaylist = true
+
+                    print("[DEBUG] Generating playlist with OpenAI...")
+                    OpenAIService.shared.generatePlaylist(from: formattedResponses) { result in
+                        DispatchQueue.main.async {
+                            switch result {
+                            case .success(let generatedPlaylistID):
+                                print("[DEBUG] Playlist generated successfully: \(generatedPlaylistID)")
+                                self.playlistID = generatedPlaylistID  // Store playlist ID
+                                
+                                // Fetch the Spotify user ID and store the playlist in Supabase
+                                Task {
+                                    guard let token = UserDefaults.standard.string(forKey: "SpotifyAccessToken"),
+                                          !token.isEmpty,
+                                          let spotifyUserID = await fetchSpotifyUserID(accessToken: token)
+                                    else {
+                                        print("[ERROR] Unable to fetch Spotify user ID.")
+                                        DispatchQueue.main.async {
+                                            self.showError = true
+                                            self.errorMessage = "Failed to fetch Spotify user ID."
+                                        }
+                                        return
+                                    }
+                                    SupabaseService.shared.storeMoodSelection(
+                                        spotifyUserID: spotifyUserID,
+                                        mood: "Energetic & Stressed",
+                                        playlistID: generatedPlaylistID
+                                    ) { storeResult in
+                                        DispatchQueue.main.async {
+                                            switch storeResult {
+                                            case .success:
+                                                self.navigateToPlaylist = true // Navigate to Spotify Playlist View
+                                            case .failure(let error):
+                                                print("[ERROR] Failed to store mood selection: \(error.localizedDescription)")
+                                                self.showError = true
+                                                self.errorMessage = "Failed to save playlist data. Try again."
+                                            }
+                                        }
+                                    }
+                                }
+
+                            case .failure(let error):
+                                print("[ERROR] Failed to generate playlist: \(error.localizedDescription)")
+                                self.showError = true
+                                self.errorMessage = "Failed to generate playlist. Please try again."
+                            }
+                        }
+                    }
                 } else {
                     self.showError = true
                     self.errorMessage = "Failed to submit responses to Supabase."

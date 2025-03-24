@@ -5,7 +5,6 @@
 //  Created by Michelle Rodriguez on 18/02/2025.
 //
 
-
 import Foundation
 
 enum OpenAIError: Error {
@@ -14,6 +13,20 @@ enum OpenAIError: Error {
     case decodingFailed
     case noMoodDetected
     case rateLimited
+}
+
+// MARK: - OpenAI API Response Model
+struct OpenAIChatResponse: Codable {
+    let choices: [Choice]
+
+    struct Choice: Codable {
+        let message: Message
+    }
+
+    struct Message: Codable {
+        let role: String
+        let content: String
+    }
 }
 
 class OpenAIService {
@@ -28,7 +41,8 @@ class OpenAIService {
     }()
     
     private let openAIEndpoint = "https://api.openai.com/v1/chat/completions"
-    
+
+    // MARK: - Mood Classification
     func classifyMood(
         responses: [Response],
         completion: @escaping (Result<String, OpenAIError>) -> Void
@@ -47,99 +61,144 @@ class OpenAIService {
         
         sendOpenAIRequest(requestBody: requestBody, completion: completion)
     }
-    
-    func generatePlaylist(from responses: [Response], completion: @escaping (Result<String, OpenAIError>) -> Void) {
-        classifyMood(responses: responses) { result in
-            switch result {
+
+    // MARK: - Generate Playlist from Responses
+    func generatePlaylist(
+        from responses: [Response],
+        completion: @escaping (Result<String, OpenAIError>) -> Void
+    ) {
+        classifyMood(responses: responses) { moodResult in
+            switch moodResult {
             case .success(let mood):
-                let songPrompt = """
-                Based on the mood '\(mood)', suggest a Spotify playlist with 10 songs.
-                Format: Provide only the song names and artist in a comma-separated list.
-                """
-                
-                let requestBody: [String: Any] = [
-                    "model": "gpt-3.5-turbo",
-                    "messages": [
-                        ["role": "system", "content": "You are a music assistant that provides song recommendations based on mood."],
-                        ["role": "user", "content": songPrompt]
-                    ],
-                    "max_tokens": 150,
-                    "temperature": 0.7
-                ]
-                
-                self.sendOpenAIRequest(requestBody: requestBody) { result in
-                    switch result {
-                    case .success(let playlistText):
-                        let songLines = playlistText.components(separatedBy: "\n").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-                        let songNames = songLines.filter { !$0.isEmpty && $0.contains(" by ") }
-                        
-                        if songNames.isEmpty {
-                            completion(.failure(.decodingFailed))
-                            return
-                        }
-                        
-                        SpotifyAPIService.shared.searchForTracks(songNames: songNames) { trackResult in
-                            switch trackResult {
-                            case .success(let trackIDs):
-                                SpotifyAPIService.shared.fetchUserProfile { userResult in
-                                    switch userResult {
-                                    case .success(let profile):
-                                        guard let userID = profile["id"] as? String else {
-                                            completion(.failure(.requestFailed("User ID not found.")))
-                                            return
-                                        }
-                                        
-                                        SpotifyAPIService.shared.createPlaylist(userID: userID, mood: mood) { playlistResult in
-                                            switch playlistResult {
-                                            case .success(let playlistID):
-                                                SpotifyAPIService.shared.addTracksToPlaylist(playlistID: playlistID, trackIDs: trackIDs) { addResult in
-                                                    switch addResult {
-                                                    case .success:
-                                                        SupabaseService.shared.storeMoodSelection(mood: mood, playlistID: playlistID) { storeResult in
-                                                            switch storeResult {
-                                                            case .success:
-                                                                completion(.success(playlistID))
-                                                            case .failure(let error):
-                                                                completion(.failure(.requestFailed(error.localizedDescription)))
-                                                            }
-                                                        }
-                                                    case .failure(let error):
-                                                        completion(.failure(.requestFailed(error.localizedDescription)))
-                                                    }
-                                                }
-                                            case .failure(let error):
-                                                completion(.failure(.requestFailed(error.localizedDescription)))
-                                            }
-                                        }
-                                    case .failure(let error):
-                                        completion(.failure(.requestFailed(error.localizedDescription)))
-                                    }
-                                }
-                            case .failure(let error):
-                                completion(.failure(.requestFailed(error.localizedDescription)))
-                            }
-                        }
-                    case .failure(let error):
-                        completion(.failure(error))
-                    }
-                }
+                self.fetchPlaylist(for: mood, completion: completion)
             case .failure(let error):
                 completion(.failure(error))
             }
         }
     }
-    
+
+    // MARK: - Fetch Playlist Based on Mood
+    private func fetchPlaylist(
+        for mood: String,
+        completion: @escaping (Result<String, OpenAIError>) -> Void
+    ) {
+        let songPrompt = """
+        Based on the mood '\(mood)', suggest a Spotify playlist with 10 songs.
+        Format: Provide only the song names and artist in a comma-separated list.
+        """
+        
+        let requestBody: [String: Any] = [
+            "model": "gpt-3.5-turbo",
+            "messages": [
+                ["role": "system", "content": "You are a music assistant that provides song recommendations based on mood."],
+                ["role": "user", "content": songPrompt]
+            ],
+            "max_tokens": 150,
+            "temperature": 0.7
+        ]
+        
+        sendOpenAIRequest(requestBody: requestBody) { result in
+            switch result {
+            case .success(let playlistText):
+                let songNames = playlistText
+                    .components(separatedBy: "\n")
+                    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                    .filter { !$0.isEmpty && $0.contains(" by ") }
+                
+                if songNames.isEmpty {
+                    completion(.failure(.decodingFailed))
+                    return
+                }
+
+                self.createSpotifyPlaylist(mood: mood, songNames: songNames, completion: completion)
+                
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
+
+    // MARK: - Create Spotify Playlist
+    private func createSpotifyPlaylist(
+        mood: String,
+        songNames: [String],
+        completion: @escaping (Result<String, OpenAIError>) -> Void
+    ) {
+        // 1) Search for track IDs based on the given songNames
+        SpotifyAPIService.shared.searchForTracks(songNames: songNames) { trackResult in
+            switch trackResult {
+            case .success(let trackIDs):
+                // 2) Fetch the Spotify user's profile to get userID
+                SpotifyAPIService.shared.fetchUserProfile { userResult in
+                    switch userResult {
+                    case .success(let profile):
+                        guard let userID = profile["id"] as? String else {
+                            completion(.failure(.requestFailed("User ID not found.")))
+                            return
+                        }
+
+                        // 3) Create a playlist for this user with the given mood
+                        SpotifyAPIService.shared.createPlaylist(userID: userID, mood: mood) { playlistResult in
+                            switch playlistResult {
+                            case .success(let playlistID):
+                                // 4) Add the found tracks to the new playlist
+                                SpotifyAPIService.shared.addTracksToPlaylist(
+                                    playlistID: playlistID,
+                                    trackIDs: trackIDs
+                                ) { addResult in
+                                    switch addResult {
+                                    case .success:
+                                        // 5) Store mood selection using the *Spotify user ID*
+                                        SupabaseService.shared.storeMoodSelection(
+                                            spotifyUserID: userID,  // Pass the Spotify user ID
+                                            mood: mood,
+                                            playlistID: playlistID
+                                        ) { storeResult in
+                                            switch storeResult {
+                                            case .success:
+                                                // 6) Return the playlistID on success
+                                                completion(.success(playlistID))
+                                            case .failure(let error):
+                                                completion(.failure(.requestFailed(error.localizedDescription)))
+                                            }
+                                        }
+
+                                    case .failure(let error):
+                                        completion(.failure(.requestFailed(error.localizedDescription)))
+                                    }
+                                }
+
+                            case .failure(let error):
+                                completion(.failure(.requestFailed(error.localizedDescription)))
+                            }
+                        }
+
+                    case .failure(let error):
+                        completion(.failure(.requestFailed(error.localizedDescription)))
+                    }
+                }
+
+            case .failure(let error):
+                completion(.failure(.requestFailed(error.localizedDescription)))
+            }
+        }
+    }
+
+
+    // MARK: - OpenAI API Request
     private func sendOpenAIRequest(
         requestBody: [String: Any],
         retryCount: Int = 0,
         completion: @escaping (Result<String, OpenAIError>) -> Void
     ) {
         guard let apiKey = openAIKey else {
+            print("[ERROR] OpenAI API Key is missing.")
             completion(.failure(.missingAPIKey))
             return
         }
         
         guard let jsonData = try? JSONSerialization.data(withJSONObject: requestBody) else {
+            print("[ERROR] Failed to encode OpenAI request.")
             completion(.failure(.decodingFailed))
             return
         }
@@ -163,12 +222,18 @@ class OpenAIService {
                 return
             }
 
-            if httpResponse.statusCode != 200 {
-                let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
-                print("[ERROR] OpenAI API Error \(httpResponse.statusCode): \(errorMessage)")
-                completion(.failure(.requestFailed(errorMessage)))
+            if httpResponse.statusCode == 429 {
+                print("[ERROR] OpenAI API rate limited. Retrying in 5 seconds...")
+                if retryCount < 3 {
+                    DispatchQueue.global().asyncAfter(deadline: .now() + 5) {
+                        self.sendOpenAIRequest(requestBody: requestBody, retryCount: retryCount + 1, completion: completion)
+                    }
+                } else {
+                    completion(.failure(.rateLimited))
+                }
                 return
             }
+
             do {
                 let responseString = String(data: data, encoding: .utf8) ?? "N/A"
                 print("[DEBUG] Raw OpenAI Response: \(responseString)")
@@ -183,12 +248,14 @@ class OpenAIService {
                 }
             } catch {
                 print("[ERROR] Failed to decode OpenAI response: \(error.localizedDescription)")
+                print("[DEBUG] OpenAI Raw Data: \(String(data: data, encoding: .utf8) ?? "N/A")")
                 completion(.failure(.decodingFailed))
             }
         }.resume()
-
     }
+
     
+    // MARK: - Build Prompt for OpenAI
     private func buildPrompt(from responses: [Response]) -> String {
         var result = "Determine the user’s overall mood from these statements:\n"
         for (index, resp) in responses.enumerated() {
@@ -196,16 +263,5 @@ class OpenAIService {
         }
         result += "Please give me one of these moods: Happy, Sad, Relaxed, Energetic, or Sleepy.\n"
         return result
-    }
-    
-    struct OpenAIChatResponse: Codable {
-        let choices: [Choice]
-        struct Choice: Codable {
-            let message: Message
-            struct Message: Codable {
-                let role: String
-                let content: String
-            }
-        }
     }
 }

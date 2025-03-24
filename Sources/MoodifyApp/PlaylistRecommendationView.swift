@@ -1,22 +1,20 @@
 //
 //  PlaylistRecommendationView.swift
-//  Moodify
+//  MoodifyApp
 //
 //  Created by Michelle Rodriguez on 20/02/2025.
 //
- 
+
 import SwiftUI
+import WebKit
 import Supabase
 
 struct PlaylistRecommendationView: View {
-    
-    
     @State var userResponses: [Response]
     @State private var recommendedPlaylist: [String] = []
+    @State private var playlistURL: String? = nil
     @State private var isLoading: Bool = true
     @State private var errorMessage: String?
-    @State private var lastAPICallTime: Date = Date.distantPast
-
 
     var body: some View {
         VStack {
@@ -24,7 +22,7 @@ struct PlaylistRecommendationView: View {
                 .font(.largeTitle)
                 .bold()
                 .padding()
-            
+
             if isLoading {
                 ProgressView("Generating your playlist...")
                     .progressViewStyle(CircularProgressViewStyle(tint: .blue))
@@ -34,23 +32,24 @@ struct PlaylistRecommendationView: View {
                 Text(errorMessage)
                     .foregroundColor(.red)
                     .padding()
-            } else {
-                List(recommendedPlaylist, id: \.self) { song in
-                    Text(song)
+            } else if let playlistURL = playlistURL,
+                      let playlistID = extractSpotifyPlaylistID(from: playlistURL) {
+                // **Embed Spotify Playlist**
+                SpotifyEmbedView(playlistID: playlistID)
+                    .frame(height: 400)  // Adjust height as needed
+
+                Button("Open in Spotify App") {
+                    openInSpotifyApp(playlistID: playlistID)
                 }
+                .padding()
             }
-            
-            Button("Generate Again") {
-                fetchPlaylistRecommendation()
-            }
-            .padding()
         }
         .onAppear {
             fetchLatestResponses()
         }
     }
-    
-    // MARK: - Fetch Latest User Responses from Supabase
+
+    // MARK: - Fetch Latest User Responses
     private func fetchLatestResponses() {
         isLoading = true
         errorMessage = nil
@@ -61,73 +60,81 @@ struct PlaylistRecommendationView: View {
                     self.errorMessage = "No responses found. Please complete the questionnaire."
                     self.isLoading = false
                 } else {
-                    if responses == self.userResponses {
-                        print("[DEBUG] Using cached responses. Skipping OpenAI API call.")
-                        self.isLoading = false
-                        return
-                    }
-                    
                     self.userResponses = responses
+                    print("[DEBUG] User responses retrieved: \(responses)")
                     self.fetchPlaylistRecommendation()
                 }
             }
         }
     }
 
-
     // MARK: - Fetch Playlist Recommendation from OpenAI
-    func fetchPlaylistRecommendation(retryCount: Int = 0) {
-        let minInterval: TimeInterval = 120 // 2 minutes delay before API call
-        
-        if Date().timeIntervalSince(lastAPICallTime) < minInterval {
-            print("[DEBUG] Skipping API call: Too soon after last request.")
-            DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
-                self.fetchPlaylistRecommendation(retryCount: retryCount + 1)
-            }
-            return
-        }
-
-        lastAPICallTime = Date() // Update timestamp to prevent spam
-
-        guard !userResponses.isEmpty else {
-            DispatchQueue.main.async {
-                self.errorMessage = "No user responses available."
-            }
-            return
-        }
-
-        isLoading = true
-
+    func fetchPlaylistRecommendation() {
         OpenAIService.shared.generatePlaylist(from: userResponses) { result in
             DispatchQueue.main.async {
                 self.isLoading = false
                 
                 switch result {
-                case .success(let playlist):
-                    let parsedPlaylist = playlist
-                        .components(separatedBy: ",")
+                case .success(let playlistData):
+                    let parsedPlaylist = playlistData
+                        .components(separatedBy: "\n")
                         .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-                    
+
                     if parsedPlaylist.isEmpty {
-                        print("[ERROR] OpenAI response did not contain valid song data.")
-                        self.errorMessage = "OpenAI returned an invalid playlist. Please try again."
+                        self.errorMessage = "OpenAI returned an invalid playlist."
                     } else {
                         self.recommendedPlaylist = parsedPlaylist
+                        print("[DEBUG] Playlist generated: \(parsedPlaylist)")
+                        self.createSpotifyPlaylist()
                     }
 
                 case .failure(let error):
-                    print("[ERROR] OpenAI API request failed: \(error.localizedDescription)")
-
-                    if case .rateLimited = error {
-                        print("[DEBUG] Rate limited. Showing error.")
-                        self.errorMessage = "Too many requests. Please wait and try again later."
-                    } else {
-                        self.errorMessage = "Failed to get playlist: \(error.localizedDescription)"
-                    }
+                    self.errorMessage = "Failed to get playlist: \(error.localizedDescription)"
                 }
             }
         }
     }
 
+    // MARK: - Create Playlist on Spotify and Store in Supabase
+    private func createSpotifyPlaylist() {
+        let detectedMood = "Detected Mood"  // Replace with actual AI-based mood if needed
 
+        // `createAndSavePlaylist` should handle:
+        // 1) Creating the playlist on Spotify
+        // 2) Storing the mood + playlist in Supabase (using the Spotify user ID)
+        SpotifyAPIService.shared.createAndSavePlaylist(mood: detectedMood,
+                                                       songNames: recommendedPlaylist) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let returnedPlaylistURL):
+                    self.playlistURL = returnedPlaylistURL  // e.g. "https://open.spotify.com/playlist/..."
+                    print("[DEBUG] Spotify Playlist URL received: \(returnedPlaylistURL)")
+
+                case .failure(let error):
+                    print("[ERROR] Failed to save playlist: \(error.localizedDescription)")
+                    self.errorMessage = "Failed to save playlist to Spotify."
+                }
+            }
+        }
+    }
+
+    // MARK: - Open Playlist in Spotify App
+    private func openInSpotifyApp(playlistID: String) {
+        guard let url = URL(string: "spotify://playlist/\(playlistID)") else {
+            print("[ERROR] Invalid playlist URL: \(playlistID)")
+            return
+        }
+        UIApplication.shared.open(url)
+    }
+
+    // MARK: - Extract Spotify Playlist ID
+    private func extractSpotifyPlaylistID(from url: String) -> String? {
+        let components = url.components(separatedBy: "/")
+        if let lastComponent = components.last?.components(separatedBy: "?").first {
+            print("[DEBUG] Extracted Playlist ID: \(lastComponent)")
+            return lastComponent
+        }
+        print("[ERROR] Failed to extract Spotify Playlist ID from URL: \(url)")
+        return nil
+    }
 }

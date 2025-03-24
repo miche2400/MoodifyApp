@@ -7,6 +7,7 @@
 
 import UIKit
 import SwiftUI
+import Supabase
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -32,29 +33,22 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     ) -> Bool {
         print("[DEBUG] AppDelegate didFinishLaunchingWithOptions called.")
 
-        // Ensure window is properly initialized
         self.window = UIWindow(frame: UIScreen.main.bounds)
-        
-        // Set an initial rootViewController
         let initialView = UIHostingController(rootView: ProgressView("Loading..."))
         self.window?.rootViewController = initialView
         self.window?.makeKeyAndVisible()
         
-        // Avoid async race conditions by updating root view after delay
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             self.updateRootView()
         }
-
         return true
     }
 
     // MARK: - Update Root View
     private func updateRootView() {
         print("[DEBUG] Updating Root View...")
-        
         let rootView = determineRootView()
         let hostingController = UIHostingController(rootView: rootView)
-        
         DispatchQueue.main.async {
             self.window?.rootViewController = hostingController
         }
@@ -67,9 +61,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                 ProgressView("Checking session...")
                     .progressViewStyle(CircularProgressViewStyle(tint: .blue))
                     .scaleEffect(1.5)
-                    .onAppear {
-                        self.checkLoginStatus()
-                    }
+                    .onAppear { self.checkLoginStatus() }
             )
         } else if isLoggedIn {
             print("[DEBUG] Showing ContentView.")
@@ -83,11 +75,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     // MARK: - Check Login Status
     private func checkLoginStatus() {
         print("Checking if user is logged in...")
-
         if isLoggedIn {
             print("User is logged in. Checking token validity...")
-
-            if let accessToken = SpotifyAuthManager.shared.getAccessToken(), !accessToken.isEmpty {
+            if let token = SpotifyAuthManager.shared.getAccessToken(), !token.isEmpty {
                 print("Valid Spotify token found.")
                 DispatchQueue.main.async {
                     self.isCheckingSession = false
@@ -117,35 +107,44 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     // MARK: - Handle Spotify Redirect
-    func application(
-        _ app: UIApplication,
-        open url: URL,
-        options: [UIApplication.OpenURLOptionsKey: Any] = [:]
-    ) -> Bool {
+    func application(_ app: UIApplication,
+                     open url: URL,
+                     options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool
+    {
         print("[DEBUG] AppDelegate received URL: \(url.absoluteString)")
 
-        guard let scheme = url.scheme, scheme.lowercased() == "moodifyapp",
-              let host = url.host, host == "callback" else {
-            print("[ERROR] Invalid URL Scheme or Host in AppDelegate")
-            return false
+        // Check for custom Supabase callback (if implemented)
+        if let scheme = url.scheme, scheme.lowercased() == "moodifyapp-supabase",
+           let host = url.host, host.lowercased() == "auth" {
+            print("[DEBUG] Handling Supabase callback: \(url.absoluteString)")
+            // TODO: Handle custom Supabase callback if needed.
+            return true
         }
 
-        SpotifyAuthManager.shared.handleRedirect(url: url) { success in
-            DispatchQueue.main.async {
-                if success {
-                    print("[DEBUG] Token exchange successful in AppDelegate")
-                    self.isLoggedIn = true
-                    self.updateRootView()
-                    NotificationCenter.default.post(name: Notification.Name("SpotifyLoginSuccess"), object: nil)
-                } else {
-                    print(" [ERROR] Token exchange failed in AppDelegate")
-                    self.isLoggedIn = false
-                    self.updateRootView()
-                    NotificationCenter.default.post(name: Notification.Name("SpotifyLoginFailure"), object: nil)
+        // Handle Spotify callback
+        if let scheme = url.scheme, scheme.lowercased() == "moodifyapp",
+           let host = url.host, host.lowercased() == "callback" {
+            print("[DEBUG] Handling Spotify callback: \(url.absoluteString)")
+            SpotifyAuthManager.shared.handleRedirect(url: url) { success in
+                DispatchQueue.main.async {
+                    if success {
+                        print("[DEBUG] Token exchange successful in AppDelegate")
+                        self.isLoggedIn = true
+                        self.updateRootView()
+                        NotificationCenter.default.post(name: Notification.Name("SpotifyLoginSuccess"), object: nil)
+                    } else {
+                        print("[ERROR] Token exchange failed in AppDelegate")
+                        self.isLoggedIn = false
+                        self.updateRootView()
+                        NotificationCenter.default.post(name: Notification.Name("SpotifyLoginFailure"), object: nil)
+                    }
                 }
             }
+            return true
         }
-        return true
+
+        print("[ERROR] Invalid URL Scheme or Host in AppDelegate")
+        return false
     }
 
     // MARK: - Setup Notification Observers
@@ -156,9 +155,20 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             queue: .main
         ) { _ in
             DispatchQueue.main.async {
-                print(" Spotify login successful! Navigating to ContentView.")
+                print("[DEBUG] Spotify login successful! Navigating to ContentView.")
                 self.isLoggedIn = true
                 self.updateRootView()
+                
+                // Check for a Supabase session (optional in our custom flow)
+                Task {
+                    do {
+                        let session = try await SupabaseService.shared.auth.session
+                        print("[DEBUG] Supabase session active: \(session)")
+                        UserDefaults.standard.set(session.accessToken, forKey: "SupabaseAccessToken")
+                    } catch {
+                        print("[WARNING] No active Supabase session found, skipping built-in OAuth because we use our custom token approach.")
+                    }
+                }
             }
         }
 
