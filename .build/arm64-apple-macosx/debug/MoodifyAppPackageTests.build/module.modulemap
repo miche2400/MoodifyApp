@@ -1,4 +1,0 @@
-module MoodifyAppPackageTests {
-    header "/Users/michellerodriguez/Documents/GitHub/MoodifyApp/.build/arm64-apple-macosx/debug/MoodifyAppPackageTests.build/MoodifyAppPackageTests-Swift.h"
-    requires objc
-}

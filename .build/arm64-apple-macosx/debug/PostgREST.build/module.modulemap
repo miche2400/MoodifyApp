@@ -1,4 +1,0 @@
-module PostgREST {
-    header "/Users/michellerodriguez/Documents/GitHub/MoodifyApp/.build/arm64-apple-macosx/debug/PostgREST.build/PostgREST-Swift.h"
-    requires objc
-}

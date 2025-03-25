@@ -1,4 +1,0 @@
-module GetExtensions {
-    header "/Users/michellerodriguez/Documents/GitHub/MoodifyApp/.build/arm64-apple-macosx/debug/GetExtensions.build/GetExtensions-Swift.h"
-    requires objc
-}

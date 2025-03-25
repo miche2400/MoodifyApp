@@ -1,4 +1,0 @@
-module Supabase {
-    header "/Users/michellerodriguez/Documents/GitHub/MoodifyApp/.build/arm64-apple-macosx/debug/Supabase.build/Supabase-Swift.h"
-    requires objc
-}

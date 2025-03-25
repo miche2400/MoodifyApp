@@ -1,12 +1,21 @@
 {
   "pins" : [
     {
+      "identity" : "openai",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/MacPaw/OpenAI.git",
+      "state" : {
+        "branch" : "main",
+        "revision" : "58de48f0da70ec743727849245c24a22c03f1ee6"
+      }
+    },
+    {
       "identity" : "supabase-swift",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/supabase/supabase-swift.git",
       "state" : {
-        "revision" : "660f709d2043cf93cc7af2cb2eae4cc4e4c00b45",
-        "version" : "2.24.6"
+        "branch" : "main",
+        "revision" : "6cfad3ae806c05b2f75018cabf91ad490cb5966a"
       }
     },
     {

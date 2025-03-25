@@ -1,4 +1,0 @@
-module MoodifyApp {
-    header "/Users/michellerodriguez/Documents/GitHub/MoodifyApp/.build/arm64-apple-macosx/debug/MoodifyApp.build/MoodifyApp-Swift.h"
-    requires objc
-}
