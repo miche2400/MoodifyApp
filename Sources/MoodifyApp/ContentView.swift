@@ -10,9 +10,6 @@ import Foundation
 import Supabase
 
 struct ContentView: View {
-    // Use this flag to force showing the questionnaire
-    let forceQuestionnaire: Bool 
-
     // MARK: - App Storage
     @AppStorage("UserLoggedIn") private var isLoggedIn: Bool = false
     @AppStorage("SpotifyAccessToken") private var accessToken: String?
@@ -28,10 +25,10 @@ struct ContentView: View {
     // Controls navigation
     @State private var navigateToQuestionnaire: Bool = false
     @State private var navigateToPlaylist: Bool = false
-    @State private var playlistID: String? // Final playlist ID from OpenAI
+    @State private var playlistID: String? // Set after generating a playlist
 
-    // If the user has at least one playlist, this becomes true
-    @State private var userHasPlaylists: Bool = false
+    // If the user has at least one playlist, skip the questionnaire
+    @State private var userHasPlaylists = false
 
     // MARK: - Questionnaire Data
     private let likertQuestions = [
@@ -62,23 +59,22 @@ struct ContentView: View {
                 Color(.systemBackground).ignoresSafeArea()
 
                 if isCheckingToken {
+                    // Checking if user is logged in
                     ProgressView("Checking session...")
                         .progressViewStyle(CircularProgressViewStyle(tint: .blue))
                         .scaleEffect(1.5)
                 } else {
                     if isLoggedIn {
-                        // If forceQuestionnaire is true, show the questionnaire even if playlists exist.
-                        // Otherwise, if the user already has stored playlists, show AllPlaylistsView.
-                        if forceQuestionnaire {
-                            questionnaireView
+                        // If user is logged in, decide which screen to show:
+                        // If userHasPlaylists == true, show AllPlaylistsView
+                        // Otherwise, show the questionnaire
+                        if userHasPlaylists {
+                            AllPlaylistsView()
                         } else {
-                            if userHasPlaylists {
-                                AllPlaylistsView()
-                            } else {
-                                questionnaireView
-                            }
+                            questionnaireView
                         }
                     } else {
+                        // Not logged in => show Spotify login
                         SpotifyLoginView(
                             isLoggedIn: .constant(false),
                             navigateToQuestionnaire: .constant(false)
@@ -107,19 +103,13 @@ struct ContentView: View {
             .onAppear {
                 print("[DEBUG] ContentView appeared. Checking user session...")
                 validateUserSession()
-                // Only check stored playlists if we're not forcing the questionnaire.
-                if !forceQuestionnaire {
-                    checkStoredPlaylists()
-                }
             }
         }
         .onChange(of: isLoggedIn, initial: false) { oldValue, newValue in
+            // If user logs in, check if they already have playlists
             if !oldValue && newValue {
-                print("[DEBUG] User logged in.")
-                // Once logged in, check if the user has stored playlists (if not forcing questionnaire)
-                if !forceQuestionnaire {
-                    checkStoredPlaylists()
-                }
+                print("[DEBUG] User logged in. Checking if user has playlists.")
+                checkStoredPlaylists()
             }
         }
     }
@@ -127,8 +117,10 @@ struct ContentView: View {
     // MARK: - Validate Spotify Session
     private func validateUserSession() {
         print("[DEBUG] Starting session validation...")
+
         if let token = SpotifyAuthManager.shared.getAccessToken(), !token.isEmpty {
             print("[DEBUG] Found existing Spotify token.")
+
             Task {
                 let success = await SupabaseService.shared.loginWithSpotify(token: token)
                 DispatchQueue.main.async {
@@ -145,15 +137,16 @@ struct ContentView: View {
         }
     }
     
-    // MARK: - Check if User Has Stored Playlists
+    // MARK: - Check if user has any playlists
     private func checkStoredPlaylists() {
         SupabaseService.shared.fetchMoodSelections { fetched in
             DispatchQueue.main.async {
+                self.isCheckingToken = false
                 if fetched.isEmpty {
-                    print("[DEBUG] No playlists found for current user.")
+                    print("[DEBUG] No playlists found for current user => show questionnaire.")
                     self.userHasPlaylists = false
                 } else {
-                    print("[DEBUG] Playlists found for current user.")
+                    print("[DEBUG] Playlists found => show AllPlaylistsView.")
                     self.userHasPlaylists = true
                 }
             }
@@ -174,6 +167,7 @@ struct ContentView: View {
                     .progressViewStyle(LinearProgressViewStyle(tint: .blue))
                     .padding(.horizontal, 20)
 
+                // Show each question
                 ForEach(likertQuestions, id: \.self) { question in
                     questionCardView(question)
                 }
@@ -260,7 +254,6 @@ struct ContentView: View {
         likertQuestions.allSatisfy { responses[$0] != nil && !responses[$0]!.isEmpty }
     }
 
-    // MARK: - Submit Questionnaire
     private func mainSubmitFlow() {
         guard validateResponses() else {
             showError = true
@@ -287,7 +280,6 @@ struct ContentView: View {
                             case .success(let generatedPlaylistID):
                                 print("[DEBUG] Playlist generated successfully: \(generatedPlaylistID)")
                                 self.playlistID = generatedPlaylistID  // Store playlist ID
-                                // Navigate to the playlist recommendation view
                                 self.navigateToPlaylist = true
                             case .failure(let error):
                                 print("[ERROR] Failed to generate playlist: \(error.localizedDescription)")
@@ -304,3 +296,4 @@ struct ContentView: View {
         }
     }
 }
+
