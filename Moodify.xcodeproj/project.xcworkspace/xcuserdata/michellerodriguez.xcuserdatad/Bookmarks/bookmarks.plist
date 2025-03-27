@@ -36,11 +36,12 @@
 				<key>focused</key>
 				<string></string>
 				<key>leading</key>
-				<string>}
-
-</string>
-				<key>trailing</key>
 				<string></string>
+				<key>trailing</key>
+				<string>//
+//  ContentView.swift
+//  MoodifyApp
+</string>
 			</dict>
 			<key>type</key>
 			<string>bookmark</string>

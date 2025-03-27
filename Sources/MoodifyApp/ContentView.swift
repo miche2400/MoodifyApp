@@ -71,7 +71,12 @@ struct ContentView: View {
                         if userHasPlaylists {
                             AllPlaylistsView()
                         } else {
-                            questionnaireView
+                            
+                            QuestionnaireView { playlistID in
+                                self.playlistID = playlistID
+                                self.navigateToPlaylist = true
+                            }
+
                         }
                     } else {
                         // Not logged in => show Spotify login
@@ -84,7 +89,11 @@ struct ContentView: View {
             }
             .navigationBarHidden(true)
             .navigationDestination(isPresented: $navigateToQuestionnaire) {
-                questionnaireView
+                QuestionnaireView { playlistID in
+                    self.playlistID = playlistID
+                    self.navigateToPlaylist = true
+                }
+
             }
             .navigationDestination(isPresented: $navigateToPlaylist) {
                 if let playlistID = playlistID {
@@ -150,31 +159,6 @@ struct ContentView: View {
                     self.userHasPlaylists = true
                 }
             }
-        }
-    }
-
-    // MARK: - Questionnaire View
-    var questionnaireView: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 25) {
-                Text("Moodify")
-                    .font(.largeTitle)
-                    .bold()
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.top, 30)
-
-                ProgressView(value: progress, total: 1.0)
-                    .progressViewStyle(LinearProgressViewStyle(tint: .blue))
-                    .padding(.horizontal, 20)
-
-                // Show each question
-                ForEach(likertQuestions, id: \.self) { question in
-                    questionCardView(question)
-                }
-
-                submitButton
-            }
-            .padding(.bottom, 40)
         }
     }
 
