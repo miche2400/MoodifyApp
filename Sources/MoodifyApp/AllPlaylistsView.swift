@@ -27,7 +27,7 @@ struct AllPlaylistsView: View {
                 // "New Playlist" button at the top
                 Button(action: {
                     showNewPlaylistFlow = true
-                    
+                    forceQuestionnaire = true
                 }) {
                     Text("New Playlist")
                         .font(.headline)
