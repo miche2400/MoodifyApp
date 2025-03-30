@@ -97,7 +97,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     // MARK: - Logout User (If Token is Expired)
-    private func logoutUser() {
+    func logoutUser() {
         print("Logging out user and showing login screen.")
         DispatchQueue.main.async {
             self.isLoggedIn = false

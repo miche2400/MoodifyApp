@@ -37,26 +37,6 @@ class SupabaseService {
         client = SupabaseClient(supabaseURL: supabaseURL, supabaseKey: supabaseKey)
     }
     
-    func fetchSomething() async {
-        guard let customClient = customPostgrest else {
-            print("[ERROR] Not logged in; no PostgrestClient available.")
-            return
-        }
-
-        do {
-            let response = try await customClient
-                .from("some_table")
-                .select()
-                .execute()
-
-            let rawString = String(data: response.data, encoding: .utf8) ?? "No data"
-            print("Got data: \(rawString)")
-        } catch {
-            print("Query failed: \(error)")
-        }
-    }
-    
-    
     // MARK: - Login with Spotify OAuth Token
     func loginWithSpotify(token: String) async -> Bool {
         do {
@@ -127,7 +107,7 @@ class SupabaseService {
 
             do {
                 try await client
-                    .from("playlists")
+                    .from("moodSelections")
                     .insert(newPlaylist)
                     .execute()
 
@@ -157,7 +137,7 @@ class SupabaseService {
 
             do {
                 let response = try await client
-                    .from("playlists")
+                    .from("moodSelections")
                     .select()
                     .eq("user_id", value: spotifyUserID) // using text comparison
                     .execute()
@@ -251,14 +231,22 @@ class SupabaseService {
     
     
     // MARK: - Store Mood and Playlist Selection in Supabase
-    func storeMoodSelection(spotifyUserID: String, mood: String, playlistID: String, completion: @escaping (Result<Void, Error>) -> Void) {
+    func storeMoodSelection(
+        spotifyUserID: String,
+        mood: String,
+        playlistID: String,
+        title: String,
+        completion: @escaping (Result<Void, Error>) -> Void
+    ) {
         Task {
             let moodSelection = [
-                "user_id": spotifyUserID,  // This is the Spotify user ID as text
+                "user_id": spotifyUserID,
                 "mood": mood,
                 "playlist_id": playlistID,
+                "title": title,
                 "created_at": ISO8601DateFormatter().string(from: Date())
             ]
+
             
             do {
                 try await client

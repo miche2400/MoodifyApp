@@ -1,86 +1,131 @@
-//
-//  AllPlaylistsView.swift
-//  Moodify
-//
-//  Created by Michelle Rodriguez on 24/03/2025.
-//
+// AllPlaylistsView.swift
+// Moodify
+// Created by Michelle Rodriguez on 24/03/2025.
 
 import SwiftUI
+import Foundation
+
+struct PlaylistRoute: Identifiable, Equatable, Hashable {
+    let id: String
+    let playlistTitle: String
+}
 
 struct AllPlaylistsView: View {
+    @State private var showQuestionnaire = false
+    @State private var selectedPlaylistRoute: PlaylistRoute? = nil
     @State private var moodSelectionsList: [moodSelections] = []
     @State private var isLoading = true
     @State private var errorMessage: String?
     
-    // For navigating to a new questionnaire screen
-    @State private var showNewPlaylistFlow = false
-    
-    // Access the global isLoggedIn AppStorage from ContentView
     @AppStorage("UserLoggedIn") private var isLoggedIn: Bool = false
-    
-    // Add environment dismiss to pop this view when logging out
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                // "New Playlist" button at the top
-                Button(action: {
-                    showNewPlaylistFlow = true
-                    
-                }) {
-                    Text("New Playlist")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                        .background(Color.blue)
-                        .cornerRadius(8)
-                }
-                .padding()
-                // Navigate to your existing ContentView (questionnaire flow)
-                .navigationDestination(isPresented: $showNewPlaylistFlow) {
-                    ContentView()
-                        .navigationBarBackButtonHidden(true)
-                }
+            ZStack {
+                LinearGradient(
+                    gradient: Gradient(colors: [Color.black.opacity(0.9), Color.blue.opacity(0.7)]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
                 
-                Group {
-                    if isLoading {
-                        ProgressView("Loading playlists...")
-                            .scaleEffect(1.2)
-                    } else if let errorMessage = errorMessage {
-                        Text(errorMessage)
-                            .foregroundColor(.red)
-                            .padding()
-                    } else {
-                        // Display the user’s playlists in a List
-                        List(moodSelectionsList, id: \.id) { selection in
-                            NavigationLink(destination: PlaylistRecommendationView(playlistID: selection.playlist_id)) {
-                                VStack(alignment: .leading, spacing: 6) {
-                                    Text(selection.mood)
-                                        .font(.headline)
-                                    Text("Tap to open")
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
-                                }
-                                .padding(.vertical, 4)
+                VStack(spacing: 0) {
+                    // Header container with gradient overlay, title, and logout button
+                    HStack {
+                        Text("Your Playlists")
+                            .font(.largeTitle.weight(.bold))
+                            .foregroundColor(.white)
+                            .overlay(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [Color.purple, Color.blue]),
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                                .mask(
+                                    Text("Your Playlists")
+                                        .font(.largeTitle.weight(.bold))
+                                )
+                            )
+                        Spacer()
+                        Button("Logout") {
+                            if let delegate = UIApplication.shared.delegate as? AppDelegate {
+                                delegate.logoutUser()
                             }
                         }
-                        .listStyle(.insetGrouped)
+                        .font(.headline)
+                        .foregroundColor(.purple)
+                    }
+                    .padding()
+                    .background(Color.black.opacity(0.5))
+                    .onAppear {
+                        fetchPlaylists()
+                    }
+                    
+                    if isLoading {
+                        ProgressView()
+                            .padding()
+                        Spacer()
+                    } else if let error = errorMessage {
+                        Text(error)
+                            .foregroundColor(.red)
+                            .padding()
+                        Spacer()
+                    } else {
+                        ScrollView {
+                            LazyVStack(spacing: 12) {
+                                // The list is reversed so that the last created appears first.
+                                ForEach(Array(moodSelectionsList.enumerated()), id: \.1.id) { index, selection in
+                                    PlaylistCard(
+                                        title: selection.title.isEmpty ? "Untitled Playlist" : selection.title.replacingOccurrences(of: "\\\"", with: ""),
+                                        playlistID: selection.playlist_id,
+                                        delay: Double(index) * 0.05
+                                    ) {
+                                        selectedPlaylistRoute = PlaylistRoute(
+                                            id: selection.playlist_id,
+                                            playlistTitle: selection.title.isEmpty ? "Untitled Playlist" : selection.title.replacingOccurrences(of: "\\\"", with: "")
+                                        )
+                                    }
+                                    .padding(.horizontal)
+                                }
+                            }
+                            .padding(.bottom, 100)
+                        }
                     }
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .navigationBarBackButtonHidden(true)
+                
+                // Floating plus button at bottom right
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        Button(action: {
+                            showQuestionnaire = true
+                        }) {
+                            Image(systemName: "plus")
+                                .font(.system(size: 24, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding()
+                                .background(Color.purple)
+                                .clipShape(Circle())
+                                .shadow(color: Color.black.opacity(0.3), radius: 6, x: 0, y: 4)
+                        }
+                        .padding()
+                    }
+                }
             }
-            .navigationTitle("Your Playlists")
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarBackButtonHidden(true)
-            .toolbar {
-                // Logout button in the top-right
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Logout") {
-                        logoutFromSpotify()
-                    }
+            .navigationDestination(item: $selectedPlaylistRoute) { route in
+                PlaylistRecommendationView(playlistID: route.id, playlistTitle: route.playlistTitle)
+            }
+            .fullScreenCover(isPresented: $showQuestionnaire) {
+                QuestionnaireView { playlistID in
+                    showQuestionnaire = false
+                    // Optionally, you may retrieve the title from moodSelectionsList here if needed.
+                    selectedPlaylistRoute = PlaylistRoute(id: playlistID, playlistTitle: "New Playlist")
+                    fetchMoodSelections()
                 }
+                .navigationBarBackButtonHidden(true)
             }
             .onAppear {
                 fetchMoodSelections()
@@ -88,34 +133,32 @@ struct AllPlaylistsView: View {
         }
     }
     
-    // MARK: - Fetch Mood Selections
+    // Fetch user-specific playlists using SupabaseService
+    private func fetchPlaylists() {
+        SupabaseService.shared.fetchUserPlaylists { fetchedPlaylists in
+            DispatchQueue.main.async {
+                // Reverse list: the last created playlist appears first.
+                self.moodSelectionsList = fetchedPlaylists.reversed()
+                self.isLoading = false
+            }
+        }
+    }
+    
+    // MARK: - Fetch Mood Selections from Supabase
     private func fetchMoodSelections() {
         isLoading = true
         errorMessage = nil
-        
-        // Query moodSelections for the current Spotify user only.
         SupabaseService.shared.fetchMoodSelections { fetched in
             DispatchQueue.main.async {
                 self.isLoading = false
                 if fetched.isEmpty {
                     self.errorMessage = "No playlists found."
                 } else {
-                    self.moodSelectionsList = fetched
+                    // Reverse the order so that the latest is at the beginning
+                    self.moodSelectionsList = fetched.reversed()
                 }
             }
         }
     }
     
-    // MARK: - Logout Logic
-    private func logoutFromSpotify() {
-        // Remove stored tokens or user states
-        UserDefaults.standard.removeObject(forKey: "SpotifyAccessToken")
-        UserDefaults.standard.removeObject(forKey: "UserCompletedQuestionnaire")
-        
-        // Mark user as logged out
-        isLoggedIn = false
-        
-        // Dismiss the current view so that the login view appears
-        dismiss()
-    }
 }

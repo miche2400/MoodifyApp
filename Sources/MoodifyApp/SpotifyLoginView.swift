@@ -15,61 +15,72 @@ struct SpotifyLoginView: View {
     @State private var hasTriedLogin: Bool = false
 
     var body: some View {
-        VStack(spacing: 30) {
-            Spacer()
-
-            Text("Moodify - Your Emotional DJ")
-                .font(.largeTitle)
-                .fontWeight(.bold)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 20)
-                .foregroundColor(.primary)
-
-            if hasTriedLogin, let error = authenticationError {
-                Text(error)
-                    .foregroundColor(.red)
-                    .font(.subheadline)
-                    .multilineTextAlignment(.center)
+        ZStack {
+            Color.black.ignoresSafeArea()
+            VStack(spacing: 30) {
+                Spacer()
+                
+                // Spotify Logo
+                Image("spotifyLogo")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 150, height: 150)
+                
+                // Title text styled with white font
+                Text("Spotify Login")
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
                     .padding(.horizontal, 20)
-                    .transition(.opacity)
-            }
-
-            // Login Button - Ensures user must tap manually
-            Button(action: {
-                authenticateWithSpotify()
-            }) {
-                HStack {
-                    if isAuthenticating {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                    }
-                    Text(isAuthenticating ? "Logging in..." : "Login with Spotify")
-                        .font(.headline)
-                        .foregroundColor(.white)
+                
+                
+                if hasTriedLogin, let error = authenticationError {
+                    Text(error)
+                        .foregroundColor(.red)
+                        .font(.subheadline)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 20)
+                        .transition(.opacity)
                 }
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(isAuthenticating ? Color.gray : Color.green)
-                .cornerRadius(12)
-                .padding(.horizontal, 40)
-                .animation(.easeInOut, value: isAuthenticating)
+                
+                // Login Button - Ensures user must tap manually
+                Button(action: {
+                    authenticateWithSpotify()
+                }) {
+                    HStack {
+                        if isAuthenticating {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        }
+                        Text(isAuthenticating ? "Logging in..." : "Continue")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(
+                        LinearGradient(gradient: Gradient(colors: [Color(#colorLiteral(red: 0.1294117715, green: 0.5450980663, blue: 0.3882353008, alpha: 1)), Color(#colorLiteral(red: 0.1294117715, green: 0.5450980663, blue: 0.3882353008, alpha: 1))]),
+                                       startPoint: .leading, endPoint: .trailing))
+                    .cornerRadius(12)
+                    .padding(.horizontal, 40)
+                    .animation(.easeInOut, value: isAuthenticating)
+                }
+                .disabled(isAuthenticating)
+                
+                Spacer()
+                
+                Text("Version 1.0")
+                    .font(.footnote)
+                    .foregroundColor(.gray)
             }
-            .disabled(isAuthenticating)
-
-            Spacer()
-
-            Text("Version 1.0")
-                .font(.footnote)
-                .foregroundColor(.gray)
-
-        }
-        .background(Color(.systemBackground).ignoresSafeArea())
-        .onAppear {
-            setupLoginListeners()
-        }
-        .onDisappear {
-            removeLoginListeners()
-        }
+            }
+            .background(Color(.systemBackground).ignoresSafeArea())
+            .onAppear {
+                setupLoginListeners()
+            }
+            .onDisappear {
+                removeLoginListeners()
+            }
     }
 
     // MARK: - Spotify Authentication Flow (Only triggered by button!)

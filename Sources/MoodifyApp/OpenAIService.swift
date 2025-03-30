@@ -83,8 +83,7 @@ class OpenAIService {
         completion: @escaping (Result<String, OpenAIError>) -> Void
     ) {
         let songPrompt = """
-        Based on the mood '\(mood)', suggest a Spotify playlist with 10 songs.
-        Format: Provide only the song names and artist in a comma-separated list.
+        Based on the mood '\(mood)', suggest a Spotify playlist with 10 songs. Do not include any karaoke tracks or songs that are typically performed as karaoke. Format: Provide only the song names followed by the artist, each on a new line.
         """
         
         let requestBody: [String: Any] = [
@@ -137,47 +136,51 @@ class OpenAIService {
                             return
                         }
 
-                        // 3) Create a playlist for this user with the given mood
-                        SpotifyAPIService.shared.createPlaylist(userID: userID, mood: mood) { playlistResult in
-                            switch playlistResult {
-                            case .success(let playlistID):
-                                // 4) Add the found tracks to the new playlist
-                                SpotifyAPIService.shared.addTracksToPlaylist(
-                                    playlistID: playlistID,
-                                    trackIDs: trackIDs
-                                ) { addResult in
-                                    switch addResult {
-                                    case .success:
-                                        // 5) Store mood selection using the *Spotify user ID*
-                                        SupabaseService.shared.storeMoodSelection(
-                                            spotifyUserID: userID,  // Pass the Spotify user ID
-                                            mood: mood,
-                                            playlistID: playlistID
-                                        ) { storeResult in
-                                            switch storeResult {
+                        // 3) Generate a playlist title using OpenAI based on mood
+                        self.generatePlaylistTitle(from: mood) { titleResult in
+                            switch titleResult {
+                            case .success(let title):
+                                // 4) Create a playlist for this user with the generated title
+                                SpotifyAPIService.shared.createPlaylist(userID: userID, title: title, mood: mood) { playlistResult in
+                                    switch playlistResult {
+                                    case .success(let playlistID):
+                                        // 5) Add the found tracks to the newly created playlist
+                                        SpotifyAPIService.shared.addTracksToPlaylist(
+                                            playlistID: playlistID,
+                                            trackIDs: trackIDs
+                                        ) { addResult in
+                                            switch addResult {
                                             case .success:
-                                                // 6) Return the playlistID on success
-                                                completion(.success(playlistID))
+                                                // 6) Store mood selection with title in Supabase
+                                                SupabaseService.shared.storeMoodSelection(
+                                                    spotifyUserID: userID,
+                                                    mood: mood,
+                                                    playlistID: playlistID,
+                                                    title: title
+                                                ) { storeResult in
+                                                    switch storeResult {
+                                                    case .success:
+                                                        completion(.success(playlistID))
+                                                    case .failure(let error):
+                                                        completion(.failure(.requestFailed(error.localizedDescription)))
+                                                    }
+                                                }
                                             case .failure(let error):
                                                 completion(.failure(.requestFailed(error.localizedDescription)))
                                             }
                                         }
-
                                     case .failure(let error):
                                         completion(.failure(.requestFailed(error.localizedDescription)))
                                     }
                                 }
-
                             case .failure(let error):
-                                completion(.failure(.requestFailed(error.localizedDescription)))
+                                completion(.failure(error))
                             }
                         }
-
                     case .failure(let error):
                         completion(.failure(.requestFailed(error.localizedDescription)))
                     }
                 }
-
             case .failure(let error):
                 completion(.failure(.requestFailed(error.localizedDescription)))
             }
@@ -264,4 +267,26 @@ class OpenAIService {
         result += "Please give me one of these moods: Happy, Sad, Relaxed, Energetic, or Sleepy.\n"
         return result
     }
+    
+    func generatePlaylistTitle(from mood: String, completion: @escaping (Result<String, OpenAIError>) -> Void) {
+        let prompt = """
+        Based on the mood "\(mood)", generate a short, modern, and aesthetic playlist title (2-4 words max). Do not include quotes or extra explanation—just return the title.
+        """
+
+        let requestBody: [String: Any] = [
+            "model": "gpt-3.5-turbo",
+            "messages": [
+                ["role": "system", "content": "You are a music curator who generates catchy playlist titles."],
+                ["role": "user", "content": prompt]
+            ],
+            "max_tokens": 20,
+            "temperature": 0.8
+        ]
+
+        sendOpenAIRequest(requestBody: requestBody, completion: completion)
+    }
+
+    
+
+
 }

@@ -143,7 +143,7 @@ class SpotifyAuthManager {
 
     // MARK: - Authenticate
     func authenticate(completion: @escaping (Bool) -> Void) {
-        let scope = "user-read-private user-read-email playlist-modify-public playlist-modify-private"
+        let scope = "user-read-private user-read-email playlist-modify-public playlist-modify-private user-library-read"
         let encodedScope = scope.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? scope
 
         let verifier = generateCodeVerifier()

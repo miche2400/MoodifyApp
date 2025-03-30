@@ -4,85 +4,106 @@
 //
 //  Created by Michelle Rodriguez on 20/02/2025.
 //
-
 import SwiftUI
 import WebKit
 import Supabase
 
 struct PlaylistRecommendationView: View {
-    let playlistID: String  // This is passed from ContentView after generating the playlist ID
-    
-    @State private var isLoading: Bool = false
+    let playlistID: String  
+    let playlistTitle: String
+
+    @State private var isLoading: Bool = true
     @State private var errorMessage: String?
-    
-    // For programmatic navigation to AllPlaylistsView
     @State private var showAllPlaylists = false
 
     var body: some View {
         NavigationStack {
-            VStack {
-                Text("Your Personalized Playlist")
-                    .font(.largeTitle)
-                    .bold()
-                    .padding()
+            ZStack {
+                // Background
+                LinearGradient(gradient: Gradient(colors: [.black.opacity(0.9), .blue.opacity(0.7)]),
+                               startPoint: .topLeading,
+                               endPoint: .bottomTrailing)
+                    .ignoresSafeArea()
 
-                if isLoading {
-                    ProgressView("Loading playlist embed...")
-                        .progressViewStyle(CircularProgressViewStyle(tint: .blue))
-                        .scaleEffect(1.2)
-                        .padding()
-                } else if let errorMessage = errorMessage {
-                    Text(errorMessage)
-                        .foregroundColor(.red)
-                        .padding()
-                } else {
-                    // Embed the Spotify playlist
-                    SpotifyEmbedView(playlistID: playlistID)
-                        .frame(height: 400)
+                VStack(spacing: 24) {
+                    // Display the AI-generated title instead of a static title
+                    Text(playlistTitle)
+                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .foregroundColor(.clear)
+                        .overlay(
+                            LinearGradient(
+                                gradient: Gradient(colors: [Color.purple, Color.blue]),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                            .mask(
+                                Text(playlistTitle)
+                                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                            )
+                        )
+                        .shadow(color: Color.black.opacity(0.3), radius: 5, x: 0, y: 2)
 
-                    Button("Open in Spotify") {
-                        openInSpotifyApp(playlistID)
+                    if isLoading {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .scaleEffect(1.2)
+                    } else if let error = errorMessage {
+                        Text(error)
+                            .foregroundColor(.red)
+                            .padding()
+                    } else {
+                        SpotifyEmbedView(playlistID: playlistID)
+                            .frame(height: 400)
+
+                        Button(action: {
+                            openInSpotifyApp(playlistID)
+                        }) {
+                            Text("Open in Spotify")
+                                .fontWeight(.semibold)
+                                .padding()
+                                .frame(maxWidth: .infinity)
+                                .background(LinearGradient(colors: [.purple, .blue],
+                                                           startPoint: .leading,
+                                                           endPoint: .trailing))
+                                .foregroundColor(.white)
+                                .cornerRadius(14)
+                        }
+                        .padding(.horizontal)
                     }
-                    .padding()
                 }
+                .padding()
             }
-            .navigationBarBackButtonHidden(true) // Hide the default back arrow
+            .navigationBarBackButtonHidden(true)
             .toolbar {
-                // Custom leading toolbar button
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button {
                         showAllPlaylists = true
                     } label: {
-                        HStack {
-                            Image(systemName: "chevron.left")
-                            Text("All Playlists")
-                        }
+                        Label("All Playlists", systemImage: "chevron.left")
+                            .foregroundColor(.white)
                     }
                 }
             }
-            // iOS 16 style: when showAllPlaylists = true, push AllPlaylistsView
             .navigationDestination(isPresented: $showAllPlaylists) {
                 AllPlaylistsView()
             }
             .onAppear {
-                // If you want to show a loading spinner until the embed is displayed, set isLoading = true
-                // and hide it after some condition. For now, we’ll just set it to false.
-                isLoading = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                    isLoading = false
+                }
             }
         }
     }
 
-    // MARK: - Open Playlist in Spotify App
+    // MARK: - Spotify URL Handling
     private func openInSpotifyApp(_ playlistID: String) {
-        let spotifyURLString = "spotify://playlist/\(playlistID)"
-        if let url = URL(string: spotifyURLString), UIApplication.shared.canOpenURL(url) {
-            UIApplication.shared.open(url)
-        } else if let webURL = URL(string: "https://open.spotify.com/playlist/\(playlistID)") {
-            // Fallback: open the playlist in Safari if the Spotify app isn’t available
-            UIApplication.shared.open(webURL)
+        let appURL = URL(string: "spotify://playlist/\(playlistID)")!
+        let webURL = URL(string: "https://open.spotify.com/playlist/\(playlistID)")!
+
+        if UIApplication.shared.canOpenURL(appURL) {
+            UIApplication.shared.open(appURL)
         } else {
-            print("[ERROR] Unable to construct a valid URL for playlist: \(playlistID)")
+            UIApplication.shared.open(webURL)
         }
     }
-
 }
