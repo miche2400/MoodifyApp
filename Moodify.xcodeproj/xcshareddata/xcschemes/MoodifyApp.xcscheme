@@ -36,8 +36,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "D69712832D11C6A4006C23D4"
-               BuildableName = "MoodifyAppTests.xctest"
-               BlueprintName = "MoodifyAppTests"
+               BuildableName = "MoodifyAppTests1.xctest"
+               BlueprintName = "MoodifyAppTests1"
                ReferencedContainer = "container:Moodify.xcodeproj">
             </BuildableReference>
          </TestableReference>
@@ -49,6 +49,17 @@
                BlueprintIdentifier = "D697128D2D11C6A4006C23D4"
                BuildableName = "MoodifyAppUITests.xctest"
                BlueprintName = "MoodifyAppUITests"
+               ReferencedContainer = "container:Moodify.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "D60906B72D9D866400E77FCB"
+               BuildableName = "MoodifyAppTests.xctest"
+               BlueprintName = "MoodifyAppTests"
                ReferencedContainer = "container:Moodify.xcodeproj">
             </BuildableReference>
          </TestableReference>

@@ -29,7 +29,11 @@ struct OpenAIChatResponse: Codable {
     }
 }
 
-class OpenAIService {
+protocol OpenAIServiceProtocol {
+    func generatePlaylistTitle(from mood: String, completion: @escaping (Result<String, OpenAIError>) -> Void)
+}
+
+class OpenAIService: OpenAIServiceProtocol {
     static let shared = OpenAIService()
     
     private let openAIKey: String? = {
@@ -259,7 +263,7 @@ class OpenAIService {
 
     
     // MARK: - Build Prompt for OpenAI
-    private func buildPrompt(from responses: [Response]) -> String {
+    func buildPrompt(from responses: [Response]) -> String {
         var result = "Determine the user’s overall mood from these statements:\n"
         for (index, resp) in responses.enumerated() {
             result += "\(index + 1)) Question: \"\(resp.question)\"\n   Answer: \"\(resp.answer)\"\n\n"
