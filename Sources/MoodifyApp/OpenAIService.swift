@@ -127,11 +127,11 @@ class OpenAIService: OpenAIServiceProtocol {
         songNames: [String],
         completion: @escaping (Result<String, OpenAIError>) -> Void
     ) {
-        // 1) Search for track IDs based on the given songNames
+        // Search for track IDs based on the given songNames
         SpotifyAPIService.shared.searchForTracks(songNames: songNames) { trackResult in
             switch trackResult {
             case .success(let trackIDs):
-                // 2) Fetch the Spotify user's profile to get userID
+                // Fetch the Spotify user's profile to get userID
                 SpotifyAPIService.shared.fetchUserProfile { userResult in
                     switch userResult {
                     case .success(let profile):
@@ -140,22 +140,22 @@ class OpenAIService: OpenAIServiceProtocol {
                             return
                         }
 
-                        // 3) Generate a playlist title using OpenAI based on mood
+                        // Generate a playlist title using OpenAI based on mood
                         self.generatePlaylistTitle(from: mood) { titleResult in
                             switch titleResult {
                             case .success(let title):
-                                // 4) Create a playlist for this user with the generated title
+                                // Create a playlist for this user with the generated title
                                 SpotifyAPIService.shared.createPlaylist(userID: userID, title: title, mood: mood) { playlistResult in
                                     switch playlistResult {
                                     case .success(let playlistID):
-                                        // 5) Add the found tracks to the newly created playlist
+                                        // Add the found tracks to the newly created playlist
                                         SpotifyAPIService.shared.addTracksToPlaylist(
                                             playlistID: playlistID,
                                             trackIDs: trackIDs
                                         ) { addResult in
                                             switch addResult {
                                             case .success:
-                                                // 6) Store mood selection with title in Supabase
+                                                // Store mood selection with title in Supabase
                                                 SupabaseService.shared.storeMoodSelection(
                                                     spotifyUserID: userID,
                                                     mood: mood,

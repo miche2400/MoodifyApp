@@ -40,7 +40,7 @@ class SupabaseService {
     // MARK: - Login with Spotify OAuth Token
     func loginWithSpotify(token: String) async -> Bool {
         do {
-            // 1) Construct request to your Edge Function URL
+            // Construct request to your Edge Function URL
             guard let url = URL(string: "https://djmpjkmbodnteepykdva.supabase.co/functions/v1/exchange-spotify-token")
             else {
                 fatalError("Invalid Edge Function URL")
@@ -49,29 +49,29 @@ class SupabaseService {
             request.httpMethod = "POST"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-            // 2) Load the anon key from Info.plist
+            // Load the anon key from Info.plist
             guard let anonKey = Bundle.main.infoDictionary?["SUPABASE_KEY"] as? String else {
                 fatalError("Supabase anon key not found in Info.plist")
             }
 
-            // 3) Provide the Authorization header so the function won’t return 401
+            // Provide the Authorization header so the function won’t return 401
             request.setValue("Bearer \(anonKey)", forHTTPHeaderField: "Authorization")
 
-            // 4) Send the Spotify token in the POST body
+            // Send the Spotify token in the POST body
             let requestBody: [String: String] = ["spotifyAccessToken": token]
             request.httpBody = try JSONEncoder().encode(requestBody)
 
-            // 5) Perform the network request
+            // Perform the network request
             let (data, _) = try await URLSession.shared.data(for: request)
 
-            // 6) Debug print the raw response text
+            // Debug print the raw response text
             let rawString = String(data: data, encoding: .utf8) ?? "No response data"
             print("[DEBUG] Raw response from exchange-spotify-token:\n\(rawString)")
 
-            // 7) Decode the JSON into a dictionary
+            // Decode the JSON into a dictionary
             let responseJSON = try JSONDecoder().decode([String: String].self, from: data)
 
-            // 8) Extract "supabaseJWT"
+            // Extract "supabaseJWT"
             guard let supabaseJWT = responseJSON["supabaseJWT"] else {
                 print("[ERROR] Missing 'supabaseJWT' in response.")
                 return false

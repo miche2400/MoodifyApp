@@ -22,7 +22,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     override init() {
         super.init()
-        print("🛠 [DEBUG] AppDelegate INIT called!")
+        print("[DEBUG] AppDelegate INIT called!")
         setupNotificationListeners()
     }
 

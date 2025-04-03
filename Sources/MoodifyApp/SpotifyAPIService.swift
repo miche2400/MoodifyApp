@@ -217,7 +217,6 @@ class SpotifyAPIService {
             }
 
             let uris = trackIDs.map { "spotify:track:\($0)" }
-            // Fixed URL endpoint to use /playlists instead of /moodSelections
             let url = URL(string: "\(self.baseURL)/playlists/\(playlistID)/tracks")!
             var request = URLRequest(url: url)
             request.httpMethod = "POST"

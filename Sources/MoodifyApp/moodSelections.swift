@@ -10,7 +10,7 @@ import Foundation
 struct moodSelections: Codable, Equatable {
     let id: Int?
     let created_at: String?
-    let user_id: String  // Updated from UUID to String
+    let user_id: String  
     let mood: String
     let playlist_id: String
     let title: String  

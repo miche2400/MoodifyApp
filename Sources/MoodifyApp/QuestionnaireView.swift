@@ -14,7 +14,7 @@ struct QuestionnaireView: View {
     @State private var showError = false
     @State private var errorMessage = ""
 
-    // Playful and modern Likert questions for determining current mood
+    // Modern Likert questions for determining current mood
     let likertQuestions = [
         "I'm totally on fire today – ready to crush my goals!",
         "I'm super chill and living in my zen zone right now.",
